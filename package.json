@@ -27,6 +27,23 @@
       "mode": "view"
     }
   ],
+  "tools": [
+    {
+      "name": "list-meetings",
+      "title": "List Meetings",
+      "description": "Search and list Fathom meetings with full-text search across titles, summaries, and transcripts, plus filters for participants, date ranges, topics, and meeting types"
+    },
+    {
+      "name": "get-meeting-details",
+      "title": "Get Meeting Details",
+      "description": "Retrieve detailed information about a specific Fathom meeting including summary, transcript, action items, participants, and duration"
+    },
+    {
+      "name": "list-team-members",
+      "title": "List Team Members",
+      "description": "List Fathom team members with their names, emails, and team affiliations"
+    }
+  ],
   "dependencies": {
     "@raycast/api": "^1.103.2",
     "@raycast/utils": "^1.17.0",

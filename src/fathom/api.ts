@@ -92,8 +92,15 @@ async function listMeetingsHTTP(filter: MeetingFilter): Promise<Paginated<Meetin
       params.push(`calendar_invitees_domains[]=${encodeURIComponent(domain)}`),
     );
   }
-  if (filter.createdAfter) params.push(`created_after=${encodeURIComponent(filter.createdAfter)}`);
-  if (filter.createdBefore) params.push(`created_before=${encodeURIComponent(filter.createdBefore)}`);
+  if (filter.teams?.length) {
+    filter.teams.forEach((team) => params.push(`teams[]=${encodeURIComponent(team)}`));
+  }
+  if (filter.recordedBy?.length) {
+    filter.recordedBy.forEach((email) => params.push(`recorded_by[]=${encodeURIComponent(email)}`));
+  }
+
+  // Always include action items count in the response
+  params.push("include_action_items=true");
 
   const queryString = params.length > 0 ? `?${params.join("&")}` : "";
   const resp = await authGet<unknown>(`/meetings${queryString}`);
@@ -175,6 +182,49 @@ function mapMeetingFromHTTP(raw: unknown): Meeting | undefined {
     recordedByTeam = toStringOrUndefined(rb["team"]) ?? null;
   }
 
+  // Parse action items array and derive count
+  const actionItemsRaw = Array.isArray(r["action_items"]) ? r["action_items"] : [];
+  const actionItems = actionItemsRaw
+    .map((item: unknown) => {
+      if (typeof item !== "object" || item === null) return undefined;
+      const ai = item as Record<string, unknown>;
+
+      const description = toStringOrUndefined(ai["description"]);
+      if (!description) return undefined;
+
+      const userGenerated = Boolean(ai["user_generated"]);
+      const completed = Boolean(ai["completed"]);
+      const recordingTimestamp = toStringOrUndefined(ai["recording_timestamp"]) || "00:00:00";
+      const recordingPlaybackUrl = toStringOrUndefined(ai["recording_playback_url"]) || "";
+
+      // Parse assignee
+      let assignee: { name: string | null; email: string | null; team: string | null } = {
+        name: null,
+        email: null,
+        team: null,
+      };
+      if (typeof ai["assignee"] === "object" && ai["assignee"] !== null) {
+        const assigneeObj = ai["assignee"] as Record<string, unknown>;
+        assignee = {
+          name: toStringOrUndefined(assigneeObj["name"]) ?? null,
+          email: toStringOrUndefined(assigneeObj["email"]) ?? null,
+          team: toStringOrUndefined(assigneeObj["team"]) ?? null,
+        };
+      }
+
+      return {
+        description,
+        userGenerated,
+        completed,
+        recordingTimestamp,
+        recordingPlaybackUrl,
+        assignee,
+      };
+    })
+    .filter((ai): ai is NonNullable<typeof ai> => Boolean(ai));
+
+  const actionItemsCount = actionItems.length > 0 ? actionItems.length : undefined;
+
   return {
     id: recordingId,
     recordingId,
@@ -196,6 +246,8 @@ function mapMeetingFromHTTP(raw: unknown): Meeting | undefined {
     recordedByUserId,
     recordedByName,
     recordedByTeam,
+    actionItems,
+    actionItemsCount,
     teamId: undefined,
     teamName: null,
   };

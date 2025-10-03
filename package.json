@@ -21,12 +21,6 @@
       "mode": "view"
     },
     {
-      "name": "search-teams",
-      "title": "Search Teams",
-      "description": "Search Fathom teams",
-      "mode": "view"
-    },
-    {
       "name": "search-team-members",
       "title": "Search Team Members",
       "description": "Search Fathom team members",

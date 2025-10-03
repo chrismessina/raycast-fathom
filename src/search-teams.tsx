@@ -5,6 +5,7 @@ import { listTeams, listTeamMembers } from "./fathom/api";
 import type { Team } from "./types/Types";
 import { TeamActions } from "./actions/TeamActions";
 import { useDebouncedValue } from "./utils/debounce";
+import { getTeamColor } from "./utils/teamColors";
 
 export default function Command() {
   const [query, setQuery] = useState<string>("");
@@ -53,6 +54,18 @@ function TeamListItem({ team, onRefresh }: { team: Team; onRefresh: () => void }
     keepPreviousData: true,
   });
 
+  // Fetch team color asynchronously
+  const { data: teamColor } = useCachedPromise(
+    async (teamName: string) => {
+      return await getTeamColor(teamName);
+    },
+    [team.name],
+    {
+      initialData: undefined,
+      keepPreviousData: true,
+    },
+  );
+
   const teamMembers = membersPage?.items ?? [];
   const memberCount = teamMembers.length;
 
@@ -63,7 +76,12 @@ function TeamListItem({ team, onRefresh }: { team: Team; onRefresh: () => void }
       subtitle={team.createdAt ? new Date(team.createdAt).toLocaleDateString() : undefined}
       accessories={[
         memberCount > 0
-          ? { tag: { value: `${memberCount} ${memberCount === 1 ? "member" : "members"}`, color: "#007AFF" } }
+          ? {
+              tag: {
+                value: `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
+                color: teamColor || "#007AFF",
+              },
+            }
           : undefined,
       ].filter((x): x is NonNullable<typeof x> => x !== undefined)}
       actions={<TeamActions team={team} members={teamMembers} onRefresh={onRefresh} />}

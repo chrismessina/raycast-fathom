@@ -39,6 +39,10 @@ export interface Meeting {
   recordedByName?: string; // API: recorded_by.name
   recordedByTeam?: string | null; // API: recorded_by.team
 
+  // Summary metadata
+  actionItems?: ActionItem[]; // API: action_items (array of action item objects)
+  actionItemsCount?: number; // Derived from actionItems.length
+
   // Legacy fields for backwards compatibility
   teamId?: string; // Not in current API
   teamName?: string | null; // Not in current API
@@ -71,6 +75,21 @@ export interface TeamMember {
   createdAt?: string; // API: created_at (ISO 8601)
   teamId?: string; // Not in current API
   team?: string | null; // Used when filtering by team
+}
+
+export interface Assignee {
+  name: string | null; // API: assignee.name
+  email: string | null; // API: assignee.email
+  team: string | null; // API: assignee.team
+}
+
+export interface ActionItem {
+  description: string; // API: description (always in English)
+  userGenerated: boolean; // API: user_generated
+  completed: boolean; // API: completed
+  recordingTimestamp: string; // API: recording_timestamp (HH:MM:SS)
+  recordingPlaybackUrl: string; // API: recording_playback_url
+  assignee: Assignee; // API: assignee
 }
 
 export interface Summary {

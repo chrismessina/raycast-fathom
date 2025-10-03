@@ -1,57 +1,33 @@
-import { List, Icon, LaunchProps, Detail, Action, ActionPanel, showToast, Toast } from "@raycast/api";
+import { List, Icon, Detail, ActionPanel, Action, showToast, Toast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
-import { useState, useMemo, useEffect } from "react";
-import { listMeetings, listTeams, listTeamMembers, getMeetingSummary, getMeetingTranscript } from "./fathom/api";
-import type { Meeting, MeetingFilter } from "./types/Types";
-import { MeetingActions, MeetingCopyActions, MeetingOpenActions, MeetingExportActions } from "./actions/MeetingActions";
-import { getDateRanges, formatDate, formatDuration } from "./utils/dates";
+import { useMemo, useState } from "react";
+import { listMeetings, listTeams, getMeetingSummary, getMeetingTranscript } from "./fathom/api";
+import type { MeetingFilter, Meeting } from "./types/Types";
+import { MeetingCopyActions, MeetingOpenActions, MeetingExportActions } from "./actions/MeetingActions";
+import { MeetingActionItemsDetail } from "./view-action-items";
+import { MeetingListItem } from "./components/MeetingListItem";
+import { getDateRanges } from "./utils/dates";
 
-interface LaunchContext {
-  calendarInvitees?: string[];
-  team?: string;
-}
-
-export default function SearchMeetings(props: LaunchProps<{ launchContext?: LaunchContext }>) {
-  const launchContext = props.launchContext;
+export default function Command() {
   const [filterType, setFilterType] = useState<string>("all");
 
   const ranges = getDateRanges();
 
-  // Fetch teams and team members for dropdown with longer cache
+  // Fetch teams for dropdown
   const { data: teamsData } = useCachedPromise(async () => listTeams({}), [], {
-    keepPreviousData: true,
-    initialData: { items: [], nextCursor: undefined },
-  });
-  const { data: membersData } = useCachedPromise(async () => listTeamMembers(undefined, {}), [], {
     keepPreviousData: true,
     initialData: { items: [], nextCursor: undefined },
   });
 
   const teams = teamsData?.items ?? [];
-  const members = membersData?.items ?? [];
 
-  // Initialize filter from launch context
-  useEffect(() => {
-    if (launchContext?.calendarInvitees && launchContext.calendarInvitees.length > 0) {
-      setFilterType(`member:${launchContext.calendarInvitees[0]}`);
-    } else if (launchContext?.team) {
-      setFilterType(`team:${launchContext.team}`);
+  // Get display name for current filter
+  const filterDisplayName = useMemo(() => {
+    if (filterType === "all") return null;
+    if (filterType.startsWith("team:")) {
+      return filterType.replace("team:", "");
     }
-  }, [launchContext]);
-
-  // Build meeting filter based on dropdown selection
-  const meetingFilter: MeetingFilter = useMemo(() => {
-    const baseFilter: MeetingFilter = {};
-
-    if (filterType.startsWith("member:")) {
-      const email = filterType.replace("member:", "");
-      baseFilter.calendarInvitees = [email];
-    } else if (filterType.startsWith("team:")) {
-      const teamName = filterType.replace("team:", "");
-      baseFilter.teams = [teamName];
-    }
-
-    return baseFilter;
+    return null;
   }, [filterType]);
 
   // Fetch all meetings in a single call to reduce API requests
@@ -60,20 +36,54 @@ export default function SearchMeetings(props: LaunchProps<{ launchContext?: Laun
     isLoading,
     error,
   } = useCachedPromise(
-    async (filter: MeetingFilter) =>
-      listMeetings({
-        ...filter,
-        createdAfter: ranges.previousMonth.start.toISOString(),
-        createdBefore: ranges.thisWeek.end.toISOString(),
-      }),
-    [meetingFilter],
-    { keepPreviousData: true },
+    async (currentFilterType: string) => {
+      // Build filter based on current selection
+      const baseFilter: MeetingFilter = {};
+
+      if (currentFilterType.startsWith("team:")) {
+        const teamName = currentFilterType.replace("team:", "");
+        baseFilter.teams = [teamName];
+      }
+
+      // When filtering by team, fetch ALL meetings (no date restriction)
+      // When showing all meetings, restrict to recent date range
+      const finalFilter: MeetingFilter = {
+        ...baseFilter,
+      };
+
+      // Only apply date filters when NOT filtering by team
+      if (currentFilterType === "all") {
+        finalFilter.createdAfter = ranges.previousMonth.start.toISOString();
+        finalFilter.createdBefore = ranges.thisWeek.end.toISOString();
+      }
+
+      return await listMeetings(finalFilter);
+    },
+    [filterType], // Use string directly for proper change detection
+    { keepPreviousData: false }, // Don't keep previous data when filter changes
   );
 
-  // Group meetings by date range
-  const { thisWeekMeetings, lastWeekMeetings, previousMonthMeetings } = useMemo(() => {
+  // Group meetings by date range (only when showing all meetings)
+  // When filtered, show flat chronological list
+  const { thisWeekMeetings, lastWeekMeetings, previousMonthMeetings, allFilteredMeetings } = useMemo(() => {
     const allMeetings = allMeetingsData?.items ?? [];
 
+    // If filtering is active, return all meetings sorted by date (newest first)
+    if (filterType !== "all") {
+      const sorted = [...allMeetings].sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.startTimeISO).getTime();
+        const dateB = new Date(b.createdAt || b.startTimeISO).getTime();
+        return dateB - dateA; // Descending (newest first)
+      });
+      return {
+        thisWeekMeetings: [],
+        lastWeekMeetings: [],
+        previousMonthMeetings: [],
+        allFilteredMeetings: sorted,
+      };
+    }
+
+    // No filter: group by date ranges
     const thisWeek: Meeting[] = [];
     const lastWeek: Meeting[] = [];
     const previousMonth: Meeting[] = [];
@@ -98,18 +108,23 @@ export default function SearchMeetings(props: LaunchProps<{ launchContext?: Laun
       thisWeekMeetings: thisWeek,
       lastWeekMeetings: lastWeek,
       previousMonthMeetings: previousMonth,
+      allFilteredMeetings: [],
     };
-  }, [allMeetingsData, ranges]);
+  }, [allMeetingsData, ranges, filterType]);
 
-  const totalMeetings = thisWeekMeetings.length + lastWeekMeetings.length + previousMonthMeetings.length;
+  const totalMeetings =
+    filterType === "all"
+      ? thisWeekMeetings.length + lastWeekMeetings.length + previousMonthMeetings.length
+      : allFilteredMeetings.length;
 
   return (
     <List
       isLoading={isLoading}
       searchBarPlaceholder="Search meetings by title..."
       filtering={true}
+      navigationTitle={filterDisplayName ? `Meetings: ${filterDisplayName}` : "Search Meetings"}
       searchBarAccessory={
-        <List.Dropdown tooltip="Filter by Team or Team Member" value={filterType} onChange={setFilterType}>
+        <List.Dropdown tooltip="Filter by Team" value={filterType} onChange={setFilterType}>
           <List.Dropdown.Item title="All Meetings" value="all" />
 
           {teams.length > 0 && (
@@ -120,19 +135,6 @@ export default function SearchMeetings(props: LaunchProps<{ launchContext?: Laun
                   title={team.name}
                   value={`team:${team.name}`}
                   icon={Icon.PersonLines}
-                />
-              ))}
-            </List.Dropdown.Section>
-          )}
-
-          {members.length > 0 && (
-            <List.Dropdown.Section title="Team Members">
-              {members.map((member) => (
-                <List.Dropdown.Item
-                  key={`member:${member.id}`}
-                  title={`${member.name} (${member.email})`}
-                  value={`member:${member.email}`}
-                  icon={Icon.Person}
                 />
               ))}
             </List.Dropdown.Section>
@@ -156,13 +158,16 @@ export default function SearchMeetings(props: LaunchProps<{ launchContext?: Laun
                 : String(error)
           }
         />
-      ) : totalMeetings === 0 && !isLoading ? (
+      ) : totalMeetings === 0 ? (
         <List.EmptyView
           icon={Icon.Calendar}
           title="No Meetings Found"
-          description="Your recent meetings will appear here"
+          description={
+            filterDisplayName ? `No meetings found for ${filterDisplayName}` : "Your recent meetings will appear here"
+          }
         />
-      ) : (
+      ) : filterType === "all" ? (
+        // Grouped view (no filter)
         <>
           {thisWeekMeetings.length > 0 && (
             <List.Section title="This Week" subtitle={`${thisWeekMeetings.length} meetings`}>
@@ -188,29 +193,15 @@ export default function SearchMeetings(props: LaunchProps<{ launchContext?: Laun
             </List.Section>
           )}
         </>
+      ) : (
+        // Flat chronological list (when filtered)
+        <List.Section title={filterDisplayName || "Filtered Meetings"} subtitle={`${totalMeetings} meetings`}>
+          {allFilteredMeetings.map((meeting) => (
+            <MeetingListItem key={meeting.id} meeting={meeting} />
+          ))}
+        </List.Section>
       )}
     </List>
-  );
-}
-
-function MeetingListItem({ meeting }: { meeting: Meeting }) {
-  const createdDate = meeting.createdAt ? formatDate(meeting.createdAt) : "";
-  const duration = meeting.durationSeconds ? formatDuration(meeting.durationSeconds) : "";
-
-  return (
-    <List.Item
-      icon={Icon.Video}
-      title={meeting.title}
-      accessories={[
-        // Show meeting date
-        createdDate ? { text: createdDate, icon: Icon.Calendar } : undefined,
-        // Show team if available
-        meeting.recordedByTeam ? { tag: { value: meeting.recordedByTeam, color: "#007AFF" } } : undefined,
-        // Show duration
-        duration ? { text: duration, icon: Icon.Clock } : undefined,
-      ].filter((x): x is NonNullable<typeof x> => x !== undefined)}
-      actions={<MeetingActions meeting={meeting} />}
-    />
   );
 }
 
@@ -230,6 +221,7 @@ export function MeetingSummaryDetail({ meeting, recordingId }: { meeting: Meetin
     },
   });
 
+  // Build markdown without action items (they have their own dedicated view now)
   const markdown = error
     ? `# Error\n\n${error instanceof Error ? error.message : String(error)}`
     : isLoading
@@ -248,6 +240,12 @@ export function MeetingSummaryDetail({ meeting, recordingId }: { meeting: Meetin
             icon={Icon.Text}
             target={<MeetingTranscriptDetail meeting={meeting} recordingId={recordingId} />}
             shortcut={{ modifiers: ["cmd"], key: "t" }}
+          />
+          <Action.Push
+            title="View Action Items"
+            icon={Icon.CheckCircle}
+            target={<MeetingActionItemsDetail meeting={meeting} />}
+            shortcut={{ modifiers: ["cmd"], key: "i" }}
           />
 
           <MeetingCopyActions
@@ -279,6 +277,9 @@ export function MeetingSummaryDetail({ meeting, recordingId }: { meeting: Meetin
           )}
           {meeting.durationSeconds && (
             <Detail.Metadata.Label title="Duration" text={`${Math.round(meeting.durationSeconds / 60)} minutes`} />
+          )}
+          {meeting.actionItemsCount !== undefined && meeting.actionItemsCount > 0 && (
+            <Detail.Metadata.Label title="Action Items" text={String(meeting.actionItemsCount)} />
           )}
           {meeting.recordedByTeam && <Detail.Metadata.Label title="Team" text={meeting.recordedByTeam} />}
           {meeting.recordedByName && <Detail.Metadata.Label title="Recorded By" text={meeting.recordedByName} />}

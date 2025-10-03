@@ -1,11 +1,17 @@
-import { Action, ActionPanel, Icon, LaunchType, launchCommand, showToast, Toast, environment } from "@raycast/api";
+import { Action, ActionPanel, Icon, showToast, Toast, environment } from "@raycast/api";
 import type { TeamMember } from "../types/Types";
-import { exportAsVCard } from "../utils/export";
+import { exportAsVCard, exportTeamMembers } from "../utils/export";
+import MemberMeetingsView from "../search-member-meetings";
 import path from "path";
 import fs from "fs";
 
-export function TeamMemberActions(props: { member: TeamMember; onRefresh?: () => void }) {
-  const { member, onRefresh } = props;
+export function TeamMemberActions(props: {
+  member: TeamMember;
+  onRefresh?: () => void;
+  allMembers?: TeamMember[];
+  teamName?: string;
+}) {
+  const { member, onRefresh, allMembers, teamName } = props;
   const email = member.email;
 
   const exportMemberDetails = async () => {
@@ -62,35 +68,20 @@ export function TeamMemberActions(props: { member: TeamMember; onRefresh?: () =>
     }
   };
 
-  const viewMemberMeetings = async () => {
-    if (!email) {
-      await showToast({ style: Toast.Style.Failure, title: "No email address available" });
-      return;
-    }
-
-    try {
-      await launchCommand(
-        { name: "search-meetings", type: LaunchType.UserInitiated },
-        // @ts-expect-error launchContext is not defined in LaunchType.UserInitiated
-        {
-          launchContext: {
-            calendarInvitees: [email],
-          },
-        },
-      );
-    } catch (error) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to open meetings",
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  };
-
   return (
     <ActionPanel>
-      {/* Default Action */}
-      {email && <Action.OpenInBrowser url={`mailto:${email}`} title="Send Email" icon={Icon.Envelope} />}
+      {/* Default Actions */}
+      {email && (
+        <>
+          <Action.Push
+            title="View Member's Meetings"
+            icon={Icon.MagnifyingGlass}
+            target={<MemberMeetingsView email={email} name={member.name} />}
+            shortcut={{ modifiers: ["cmd"], key: "m" }}
+          />
+          <Action.OpenInBrowser url={`mailto:${email}`} title="Send Email" icon={Icon.Envelope} />
+        </>
+      )}
 
       {/* Copy Section */}
       <ActionPanel.Section title="Copy">
@@ -125,17 +116,39 @@ export function TeamMemberActions(props: { member: TeamMember; onRefresh?: () =>
           shortcut={{ modifiers: ["cmd", "shift"], key: "e" }}
         />
         <Action title="Export Member as JSON" onAction={exportMemberDetails} icon={Icon.Download} />
+        {allMembers && allMembers.length > 0 && (
+          <>
+            <Action
+              // eslint-disable-next-line @raycast/prefer-title-case
+              title={`Export All ${teamName ? `${teamName} ` : ""}Members as vCard`}
+              onAction={async () => {
+                await exportTeamMembers({
+                  members: allMembers,
+                  teamName: teamName || "Team",
+                  format: "vcf",
+                });
+              }}
+              icon={Icon.PersonLines}
+              shortcut={{ modifiers: ["cmd", "opt"], key: "v" }}
+            />
+            <Action
+              // eslint-disable-next-line @raycast/prefer-title-case
+              title={`Export All ${teamName ? `${teamName} ` : ""}Members as CSV`}
+              onAction={async () => {
+                await exportTeamMembers({
+                  members: allMembers,
+                  teamName: teamName || "Team",
+                  format: "csv",
+                });
+              }}
+              icon={Icon.Document}
+              shortcut={{ modifiers: ["cmd", "opt"], key: "c" }}
+            />
+          </>
+        )}
       </ActionPanel.Section>
 
       {/* Other Actions */}
-      {email && (
-        <Action
-          title="View Member's Meetings"
-          icon={Icon.MagnifyingGlass}
-          onAction={viewMemberMeetings}
-          shortcut={{ modifiers: ["cmd"], key: "f" }}
-        />
-      )}
       {onRefresh && (
         <Action
           title="Refresh"

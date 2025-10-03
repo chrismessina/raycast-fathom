@@ -50,13 +50,17 @@ export function convertSDKTeam(t: SDKTeam): Team {
 export function convertSDKTeamMember(tm: SDKTeamMember, teamName?: string): TeamMember {
   const emailDomain = tm.email && tm.email.includes("@") ? tm.email.split("@")[1] : undefined;
 
+  // Extract team from SDK response if available (not in SDK types but present in API response)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teamFromSDK = (tm as any).team || undefined;
+
   return {
     id: tm.email,
     name: tm.name,
     email: tm.email,
     emailDomain,
     teamId: undefined,
-    team: teamName || undefined,
+    team: teamFromSDK || teamName || undefined,
   };
 }
 

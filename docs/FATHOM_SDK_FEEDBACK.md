@@ -289,17 +289,112 @@ ResponseValidationError: Response validation failed
 }
 ```
 
-**Issue**: The SDK's `convertSDKTeamMember()` doesn't extract the `team` field from the response, requiring manual type casting:
+**Issue**: The `/team_members` API endpoint does NOT return the `team` field unless you filter by a specific team. This makes it impossible to build team filters from an unfiltered member list.
+
+**Root Cause**: API behavior is confusing and undocumented:
 
 ```typescript
-// Workaround needed
-const team = (tm as any).team || undefined;
+// API Response WITHOUT team filter
+GET /team_members
+{
+  "items": [
+    {
+      "name": "Chris Messina",
+      "email": "chris@example.com",
+      // No "team" field!
+      "created_at": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
+
+// API Response WITH team filter
+GET /team_members?team=Product
+{
+  "items": [
+    {
+      "name": "Chris Messina",
+      "email": "chris@example.com",
+      "team": "Product",  // ✅ NOW it's present!
+      "created_at": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
 ```
 
+**Workaround Implemented** (in `src/search-team-members.tsx`):
+
+To build a team filter dropdown, we must:
+1. Fetch teams list separately from `/teams` endpoint
+2. Use team names to populate the dropdown
+3. When a team is selected, fetch members with `?team=TeamName` filter
+4. When "All Teams" is selected, fetch all members (no team grouping available)
+
+```typescript
+// Fetch teams separately
+const { data: teamsData } = useCachedPromise(async () => listTeams({}), []);
+
+// Fetch members based on selected team
+const { data: membersData } = useCachedPromise(
+  async (teamName: string) => listTeamMembers(teamName || undefined, {}),
+  [selectedTeam]
+);
+```
+
+**Impact**: This requires two separate API calls and makes it impossible to show a grouped view of all members by team without N+1 queries (one per team).
+
 **Recommendation**: 
-1. Add `team` field to the `TeamMember` interface in the SDK
-2. Fix validation to accept nullable `next_cursor` in pagination responses
-3. Add `created_at` fields to both Team and TeamMember types
+1. ✅ **High Priority**: Always return the `team` field in team member responses (regardless of filter)
+2. ✅ Add `team?: string | null` field to SDK's `TeamMember` interface
+3. ✅ Add `createdAt?: string` (ISO 8601 timestamp) to `TeamMember` interface
+4. Add `createdAt?: string` to `Team` interface
+5. Fix validation to accept nullable `next_cursor` in pagination responses
+6. **Document this behavior** in API docs if it's intentional
+
+**Why This Matters**:
+
+The current API design forces inefficient patterns:
+
+- **Current (inefficient)**: To show members grouped by team, you must:
+  1. Call `/teams` to get team list (1 API call)
+  2. Call `/team_members?team=X` for each team (N API calls)
+  3. Result: N+1 queries for a simple grouped list view
+
+- **Proposed (efficient)**: If `team` field was always returned:
+  1. Call `/team_members` once (1 API call)
+  2. Group members client-side by `team` field
+  3. Result: Single API call, better performance, simpler code
+
+**Real-World Impact**:
+
+In our Raycast extension, we had to choose between:
+- ❌ Making N+1 API calls to show grouped members (slow, rate limit risk)
+- ✅ Showing ungrouped "All Members" when no filter is selected (less useful UX)
+
+We chose the latter to avoid performance issues, but it's a compromise forced by the API design.
+
+**Suggested API Enhancement**:
+
+```json
+// GET /team_members (no filter)
+{
+  "items": [
+    {
+      "name": "Chris Messina",
+      "email": "chris@example.com",
+      "team": "Product",  // ✅ Always include this
+      "created_at": "2025-01-15T10:30:00Z"
+    },
+    {
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "team": "Engineering",  // ✅ Always include this
+      "created_at": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+This simple change would enable efficient client-side grouping and filtering without additional API calls.
 
 ### 5. Rate Limiting Behavior
 
@@ -408,6 +503,7 @@ ResponseValidationError: Response validation failed
 
 ---
 
-**Last Updated**: September 30, 2025  
+**Last Updated**: October 1, 2025  
 **SDK Version Tested**: 0.0.30  
-**Features Tested**: Meetings, Teams, Team Members, Summaries, Transcripts
+**Features Tested**: Meetings, Teams, Team Members, Summaries, Transcripts  
+**Latest Issue Added**: Missing `team` field in TeamMember TypeScript interface

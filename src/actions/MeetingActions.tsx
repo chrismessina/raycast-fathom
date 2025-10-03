@@ -2,6 +2,7 @@ import { Action, ActionPanel, Icon, Keyboard } from "@raycast/api";
 import type { Meeting } from "../types/Types";
 import { exportMeeting } from "../utils/export";
 import { MeetingSummaryDetail, MeetingTranscriptDetail } from "../search-meetings";
+import { MeetingActionItemsDetail } from "../view-action-items";
 
 // Shared Copy Actions Section
 export function MeetingCopyActions(props: {
@@ -111,6 +112,12 @@ export function MeetingActions(props: { meeting: Meeting }) {
           title="View Transcript"
           icon={Icon.Text}
           target={<MeetingTranscriptDetail meeting={meeting} recordingId={recordingId} />}
+        />
+        <Action.Push
+          title="View Action Items"
+          icon={Icon.CheckCircle}
+          target={<MeetingActionItemsDetail meeting={meeting} />}
+          shortcut={{ modifiers: ["cmd"], key: "i" }}
         />
       </ActionPanel.Section>
 

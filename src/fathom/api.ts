@@ -102,6 +102,10 @@ async function listMeetingsHTTP(filter: MeetingFilter): Promise<Paginated<Meetin
   // Always include action items count in the response
   params.push("include_action_items=true");
 
+  // Include summaries and transcripts for caching
+  params.push("include_summary=true");
+  params.push("include_transcript=true");
+
   const queryString = params.length > 0 ? `?${params.join("&")}` : "";
   const resp = await authGet<unknown>(`/meetings${queryString}`);
 
@@ -225,6 +229,38 @@ function mapMeetingFromHTTP(raw: unknown): Meeting | undefined {
 
   const actionItemsCount = actionItems.length > 0 ? actionItems.length : undefined;
 
+  // Parse embedded summary if present
+  let summaryText: string | undefined;
+  if (typeof r["summary"] === "object" && r["summary"] !== null) {
+    const summaryObj = r["summary"] as Record<string, unknown>;
+    summaryText = toStringOrUndefined(summaryObj["markdown_formatted"]);
+  }
+
+  // Parse embedded transcript if present
+  let transcriptText: string | undefined;
+  if (Array.isArray(r["transcript"])) {
+    const transcriptArray = r["transcript"] as unknown[];
+    const segments = transcriptArray
+      .map((item) => {
+        if (typeof item !== "object" || item === null) return undefined;
+        const t = item as Record<string, unknown>;
+
+        let speaker: string | undefined;
+        if (typeof t["speaker"] === "object" && t["speaker"] !== null) {
+          const speakerObj = t["speaker"] as Record<string, unknown>;
+          speaker = toStringOrUndefined(speakerObj["display_name"]);
+        }
+
+        const timestamp = toStringOrUndefined(t["timestamp"]) || "00:00:00";
+        const text = toStringOrUndefined(t["text"]) || "";
+
+        return speaker && text ? `**${speaker}** [${timestamp}]\n${text}\n` : text;
+      })
+      .filter(Boolean);
+
+    transcriptText = segments.join("\n");
+  }
+
   return {
     id: recordingId,
     recordingId,
@@ -248,6 +284,8 @@ function mapMeetingFromHTTP(raw: unknown): Meeting | undefined {
     recordedByTeam,
     actionItems,
     actionItemsCount,
+    summaryText,
+    transcriptText,
     teamId: undefined,
     teamName: null,
   };

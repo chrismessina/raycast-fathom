@@ -1,15 +1,16 @@
 import { List, Icon, Detail, ActionPanel, Action, showToast, Toast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo, useState } from "react";
-import { listMeetings, listTeams, getMeetingSummary, getMeetingTranscript } from "./fathom/api";
-import type { MeetingFilter, Meeting } from "./types/Types";
-import { MeetingCopyActions, MeetingOpenActions, MeetingExportActions } from "./actions/MeetingActions";
-import { MeetingActionItemsDetail } from "./view-action-items";
+import { listTeams, getMeetingSummary, getMeetingTranscript } from "./fathom/api";
+import type { Meeting } from "./types/Types";
+import { MeetingDetailActions } from "./actions/MeetingActions";
 import { MeetingListItem } from "./components/MeetingListItem";
 import { getDateRanges } from "./utils/dates";
+import { useCachedMeetings } from "./hooks/useCachedMeetings";
 
 export default function Command() {
   const [filterType, setFilterType] = useState<string>("all");
+  const [searchText, setSearchText] = useState<string>("");
 
   const ranges = getDateRanges();
 
@@ -30,43 +31,47 @@ export default function Command() {
     return null;
   }, [filterType]);
 
-  // Fetch all meetings in a single call to reduce API requests
+  // Use cached meetings with full-text search
   const {
-    data: allMeetingsData,
+    meetings: cachedMeetings,
     isLoading,
     error,
-  } = useCachedPromise(
-    async (currentFilterType: string) => {
-      // Build filter based on current selection
-      const baseFilter: MeetingFilter = {};
+    searchMeetings,
+    refreshCache,
+  } = useCachedMeetings({
+    filter: {},
+    enableCache: true,
+  });
 
-      if (currentFilterType.startsWith("team:")) {
-        const teamName = currentFilterType.replace("team:", "");
-        baseFilter.teams = [teamName];
-      }
-
-      // When filtering by team, fetch ALL meetings (no date restriction)
-      // When showing all meetings, restrict to recent date range
-      const finalFilter: MeetingFilter = {
-        ...baseFilter,
-      };
-
-      // Only apply date filters when NOT filtering by team
-      if (currentFilterType === "all") {
-        finalFilter.createdAfter = ranges.previousMonth.start.toISOString();
-        finalFilter.createdBefore = ranges.thisWeek.end.toISOString();
-      }
-
-      return await listMeetings(finalFilter);
-    },
-    [filterType], // Use string directly for proper change detection
-    { keepPreviousData: false }, // Don't keep previous data when filter changes
-  );
-
-  // Group meetings by date range (only when showing all meetings)
-  // When filtered, show flat chronological list
+  // Filter and search meetings
   const { thisWeekMeetings, lastWeekMeetings, previousMonthMeetings, allFilteredMeetings } = useMemo(() => {
-    const allMeetings = allMeetingsData?.items ?? [];
+    console.log(`[UI] Starting filter/search with ${cachedMeetings.length} cached meetings`);
+
+    // Apply full-text search first
+    let allMeetings = searchText ? searchMeetings(searchText) : cachedMeetings;
+    console.log(`[UI] After search: ${allMeetings.length} meetings`);
+
+    // Then apply team filter
+    if (filterType.startsWith("team:")) {
+      const teamName = filterType.replace("team:", "");
+      allMeetings = allMeetings.filter(
+        (meeting) => meeting.recordedByTeam === teamName || meeting.teamName === teamName,
+      );
+      console.log(`[UI] After team filter (${teamName}): ${allMeetings.length} meetings`);
+    }
+
+    // Apply date filter for "all" view (for DISPLAY only, not for caching)
+    if (filterType === "all") {
+      const beforeDateFilter = allMeetings.length;
+      allMeetings = allMeetings.filter((meeting) => {
+        const meetingDate = new Date(meeting.createdAt || meeting.startTimeISO);
+        const meetingTime = meetingDate.getTime();
+        return meetingTime >= ranges.previousMonth.start.getTime() && meetingTime <= ranges.thisWeek.end.getTime();
+      });
+      console.log(
+        `[UI] After date filter: ${allMeetings.length} meetings (filtered out ${beforeDateFilter - allMeetings.length})`,
+      );
+    }
 
     // If filtering is active, return all meetings sorted by date (newest first)
     if (filterType !== "all") {
@@ -110,7 +115,7 @@ export default function Command() {
       previousMonthMeetings: previousMonth,
       allFilteredMeetings: [],
     };
-  }, [allMeetingsData, ranges, filterType]);
+  }, [cachedMeetings, searchMeetings, searchText, filterType, ranges]);
 
   const totalMeetings =
     filterType === "all"
@@ -120,8 +125,10 @@ export default function Command() {
   return (
     <List
       isLoading={isLoading}
-      searchBarPlaceholder="Search meetings by title..."
-      filtering={true}
+      searchBarPlaceholder="Search meetings by title, summary, or transcript..."
+      filtering={false}
+      searchText={searchText}
+      onSearchTextChange={setSearchText}
       navigationTitle={filterDisplayName ? `Meetings: ${filterDisplayName}` : "Search Meetings"}
       searchBarAccessory={
         <List.Dropdown tooltip="Filter by Team" value={filterType} onChange={setFilterType}>
@@ -157,13 +164,27 @@ export default function Command() {
                 ? error.message
                 : String(error)
           }
+          actions={
+            <ActionPanel>
+              <Action title="Refresh Cache" icon={Icon.ArrowClockwise} onAction={refreshCache} />
+            </ActionPanel>
+          }
         />
       ) : totalMeetings === 0 ? (
         <List.EmptyView
           icon={Icon.Calendar}
           title="No Meetings Found"
           description={
-            filterDisplayName ? `No meetings found for ${filterDisplayName}` : "Your recent meetings will appear here"
+            filterDisplayName
+              ? `No meetings found for ${filterDisplayName}`
+              : searchText
+                ? "No meetings match your search"
+                : "Your recent meetings will appear here"
+          }
+          actions={
+            <ActionPanel>
+              <Action title="Refresh Cache" icon={Icon.ArrowClockwise} onAction={refreshCache} />
+            </ActionPanel>
           }
         />
       ) : filterType === "all" ? (
@@ -226,7 +247,7 @@ export function MeetingSummaryDetail({ meeting, recordingId }: { meeting: Meetin
     ? `# Error\n\n${error instanceof Error ? error.message : String(error)}`
     : isLoading
       ? "Loading summary..."
-      : summary?.text || "No summary available";
+      : `# ${meeting.meetingTitle || meeting.title}\n\n${summary?.text || "No summary available"}`;
 
   return (
     <Detail
@@ -234,36 +255,19 @@ export function MeetingSummaryDetail({ meeting, recordingId }: { meeting: Meetin
       navigationTitle={meeting.title}
       isLoading={isLoading}
       actions={
-        <ActionPanel>
-          <Action.Push
-            title="View Transcript"
-            icon={Icon.Text}
-            target={<MeetingTranscriptDetail meeting={meeting} recordingId={recordingId} />}
-            shortcut={{ modifiers: ["cmd"], key: "t" }}
-          />
-          <Action.Push
-            title="View Action Items"
-            icon={Icon.CheckCircle}
-            target={<MeetingActionItemsDetail meeting={meeting} />}
-            shortcut={{ modifiers: ["cmd"], key: "i" }}
-          />
-
-          <MeetingCopyActions
-            meeting={meeting}
-            additionalContent={{
-              title: "Copy Summary",
-              content: summary?.text || "",
-              shortcut: { modifiers: ["cmd"], key: "c" },
-            }}
-          />
-          <MeetingOpenActions meeting={meeting} />
-          <MeetingExportActions meeting={meeting} recordingId={recordingId} />
-        </ActionPanel>
+        <MeetingDetailActions
+          meeting={meeting}
+          recordingId={recordingId}
+          currentView="summary"
+          additionalContent={{
+            title: "Copy Summary",
+            content: summary?.text || "",
+            shortcut: { modifiers: ["cmd"], key: "c" },
+          }}
+        />
       }
       metadata={
         <Detail.Metadata>
-          <Detail.Metadata.Label title="Meeting" text={meeting.title} />
-          {meeting.meetingTitle && <Detail.Metadata.Label title="Calendar Title" text={meeting.meetingTitle} />}
           {meeting.createdAt && (
             <Detail.Metadata.Label
               title="Date"
@@ -317,25 +321,16 @@ export function MeetingTranscriptDetail({ meeting, recordingId }: { meeting: Mee
       navigationTitle={`${meeting.title} - Transcript`}
       isLoading={isLoading}
       actions={
-        <ActionPanel>
-          <Action.Push
-            title="View Summary"
-            icon={Icon.Document}
-            target={<MeetingSummaryDetail meeting={meeting} recordingId={recordingId} />}
-            shortcut={{ modifiers: ["cmd"], key: "s" }}
-          />
-
-          <MeetingCopyActions
-            meeting={meeting}
-            additionalContent={{
-              title: "Copy Transcript",
-              content: transcript?.text || "",
-              shortcut: { modifiers: ["cmd"], key: "c" },
-            }}
-          />
-          <MeetingOpenActions meeting={meeting} />
-          <MeetingExportActions meeting={meeting} recordingId={recordingId} />
-        </ActionPanel>
+        <MeetingDetailActions
+          meeting={meeting}
+          recordingId={recordingId}
+          currentView="transcript"
+          additionalContent={{
+            title: "Copy Transcript",
+            content: transcript?.text || "",
+            shortcut: { modifiers: ["cmd"], key: "c" },
+          }}
+        />
       }
     />
   );

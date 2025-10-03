@@ -95,6 +95,51 @@ export function MeetingExportActions(props: { meeting: Meeting; recordingId: str
   );
 }
 
+// Detail View Actions (for when viewing a specific detail)
+export function MeetingDetailActions(props: {
+  meeting: Meeting;
+  recordingId: string;
+  currentView: "summary" | "transcript" | "actionItems";
+  additionalContent?: { title: string; content: string; shortcut?: Keyboard.Shortcut };
+}) {
+  const { meeting, recordingId, currentView, additionalContent } = props;
+
+  return (
+    <ActionPanel>
+      <ActionPanel.Section title="View">
+        {currentView !== "actionItems" && (
+          <Action.Push
+            title="View Action Items"
+            icon={Icon.CheckCircle}
+            target={<MeetingActionItemsDetail meeting={meeting} />}
+            shortcut={{ modifiers: ["cmd"], key: "i" }}
+          />
+        )}
+        {currentView !== "transcript" && (
+          <Action.Push
+            title="View Transcript"
+            icon={Icon.Text}
+            target={<MeetingTranscriptDetail meeting={meeting} recordingId={recordingId} />}
+            shortcut={{ modifiers: ["cmd"], key: "t" }}
+          />
+        )}
+        {currentView !== "summary" && (
+          <Action.Push
+            title="View Summary"
+            icon={Icon.Document}
+            target={<MeetingSummaryDetail meeting={meeting} recordingId={recordingId} />}
+            shortcut={{ modifiers: ["cmd"], key: "s" }}
+          />
+        )}
+      </ActionPanel.Section>
+
+      <MeetingCopyActions meeting={meeting} additionalContent={additionalContent} />
+      <MeetingOpenActions meeting={meeting} />
+      <MeetingExportActions meeting={meeting} recordingId={recordingId} />
+    </ActionPanel>
+  );
+}
+
 // Main Meeting Actions (for list view)
 export function MeetingActions(props: { meeting: Meeting }) {
   const { meeting } = props;
@@ -109,15 +154,15 @@ export function MeetingActions(props: { meeting: Meeting }) {
           target={<MeetingSummaryDetail meeting={meeting} recordingId={recordingId} />}
         />
         <Action.Push
-          title="View Transcript"
-          icon={Icon.Text}
-          target={<MeetingTranscriptDetail meeting={meeting} recordingId={recordingId} />}
-        />
-        <Action.Push
           title="View Action Items"
           icon={Icon.CheckCircle}
           target={<MeetingActionItemsDetail meeting={meeting} />}
           shortcut={{ modifiers: ["cmd"], key: "i" }}
+        />
+        <Action.Push
+          title="View Transcript"
+          icon={Icon.Text}
+          target={<MeetingTranscriptDetail meeting={meeting} recordingId={recordingId} />}
         />
       </ActionPanel.Section>
 

@@ -43,6 +43,10 @@ export interface Meeting {
   actionItems?: ActionItem[]; // API: action_items (array of action item objects)
   actionItemsCount?: number; // Derived from actionItems.length
 
+  // Optional embedded content for caching
+  summaryText?: string;
+  transcriptText?: string;
+
   // Legacy fields for backwards compatibility
   teamId?: string; // Not in current API
   teamName?: string | null; // Not in current API

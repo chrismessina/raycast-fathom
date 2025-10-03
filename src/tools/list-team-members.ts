@@ -34,8 +34,7 @@ export default async function tool(input: Input = {}) {
     if (input.team) {
       const teamsResult = await listTeams({});
       const matchingTeam = teamsResult.items.find(
-        (team) =>
-          team.name.toLowerCase() === input.team?.toLowerCase() || team.id === input.team
+        (team) => team.name.toLowerCase() === input.team?.toLowerCase() || team.id === input.team,
       );
 
       if (matchingTeam) {
@@ -81,8 +80,6 @@ export default async function tool(input: Input = {}) {
     };
   } catch (error) {
     console.error("Error listing team members:", error);
-    throw new Error(
-      `Failed to list team members: ${error instanceof Error ? error.message : String(error)}`
-    );
+    throw new Error(`Failed to list team members: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

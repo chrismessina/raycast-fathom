@@ -52,12 +52,10 @@ export default async function tool(input: Input = {}) {
   try {
     // First, try to use cached meetings for better performance
     const cachedMeetings = await getAllCachedMeetings();
-    
+
     // Apply full-text search if query is provided
-    const filteredCached = input.query 
-      ? searchCachedMeetings(cachedMeetings, input.query)
-      : cachedMeetings;
-    
+    const filteredCached = input.query ? searchCachedMeetings(cachedMeetings, input.query) : cachedMeetings;
+
     let meetings: Meeting[] = filteredCached.map((cached) => cached.meeting as Meeting);
 
     // Apply filters

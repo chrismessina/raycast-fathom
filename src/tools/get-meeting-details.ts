@@ -36,7 +36,7 @@ export default async function tool(input: Input) {
     if (!meetingId && input.title) {
       const searchFilter: { cursor?: string } = {};
       const result = await listMeetings(searchFilter);
-      
+
       const titleLower = input.title.toLowerCase();
       const matchingMeeting = result.items.find((meeting) => {
         const title = (meeting.title || "").toLowerCase();
@@ -57,7 +57,7 @@ export default async function tool(input: Input) {
 
     // Try to get from cache first
     const cached = await getCachedMeeting(meetingId);
-    
+
     let meeting: Meeting;
     let summary: string | undefined;
     let transcript: string | undefined;
@@ -71,7 +71,7 @@ export default async function tool(input: Input) {
       if (input.includeTranscript && !cached.transcript) {
         const transcriptResult = await getMeetingTranscript(meetingId);
         transcript = transcriptResult.text;
-        
+
         // Update cache with transcript
         await cacheMeeting(meetingId, meeting, summary, transcript, cached.actionItems);
       }
@@ -144,8 +144,6 @@ export default async function tool(input: Input) {
     return response;
   } catch (error) {
     console.error("Error getting meeting details:", error);
-    throw new Error(
-      `Failed to get meeting details: ${error instanceof Error ? error.message : String(error)}`
-    );
+    throw new Error(`Failed to get meeting details: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

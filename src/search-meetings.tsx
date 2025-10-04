@@ -109,6 +109,17 @@ export default function Command() {
       }
     });
 
+    // Sort each group by date (newest first)
+    const sortByDate = (a: Meeting, b: Meeting) => {
+      const dateA = new Date(a.createdAt || a.startTimeISO).getTime();
+      const dateB = new Date(b.createdAt || b.startTimeISO).getTime();
+      return dateB - dateA; // Descending (newest first)
+    };
+
+    thisWeek.sort(sortByDate);
+    lastWeek.sort(sortByDate);
+    previousMonth.sort(sortByDate);
+
     return {
       thisWeekMeetings: thisWeek,
       lastWeekMeetings: lastWeek,

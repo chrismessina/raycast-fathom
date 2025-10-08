@@ -36,10 +36,12 @@ interface TeamColorCache {
 
 let cache: TeamColorCache | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const STALE_CACHE_DURATION = 60 * 60 * 1000; // 1 hour - use stale cache if API fails
 
 /**
  * Fetches all teams and builds a color map
  * Results are cached for 5 minutes to avoid excessive API calls
+ * If API fails, returns stale cache (up to 1 hour old) or empty cache
  */
 async function fetchAndCacheTeams(): Promise<TeamColorCache> {
   const now = Date.now();
@@ -59,34 +61,45 @@ async function fetchAndCacheTeams(): Promise<TeamColorCache> {
       teams.push(...result.items);
       cursor = result.nextCursor;
     } while (cursor);
+
+    // Build color map - assign colors deterministically based on team order
+    const colorMap = new Map<string, string>();
+    teams.forEach((team, index) => {
+      const color = TEAM_COLORS[index % TEAM_COLORS.length];
+      colorMap.set(team.name, color);
+    });
+
+    cache = {
+      teams,
+      colorMap,
+      lastFetched: now,
+    };
+
+    return cache;
   } catch (error) {
-    console.error("Failed to fetch teams for color mapping:", error);
-    // If fetch fails but we have cached data, return it even if stale
-    if (cache) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isRateLimited = errorMessage.includes("Rate limit");
+
+    if (isRateLimited) {
+      console.warn("Rate limited while fetching teams. Using cached data if available.");
+    } else {
+      console.error("Failed to fetch teams for color mapping:", errorMessage);
+    }
+
+    // If fetch fails but we have cached data (even if stale), return it
+    if (cache && now - cache.lastFetched < STALE_CACHE_DURATION) {
+      console.log("Using stale team color cache due to API error");
       return cache;
     }
-    // Otherwise return empty cache
+
+    // Otherwise return empty cache - colors will be unavailable but app won't crash
+    console.warn("No cached team data available. Team colors will be unavailable.");
     return {
       teams: [],
       colorMap: new Map(),
       lastFetched: now,
     };
   }
-
-  // Build color map - assign colors deterministically based on team order
-  const colorMap = new Map<string, string>();
-  teams.forEach((team, index) => {
-    const color = TEAM_COLORS[index % TEAM_COLORS.length];
-    colorMap.set(team.name, color);
-  });
-
-  cache = {
-    teams,
-    colorMap,
-    lastFetched: now,
-  };
-
-  return cache;
 }
 
 /**

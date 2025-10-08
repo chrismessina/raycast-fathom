@@ -5,7 +5,7 @@ import { listTeams, listTeamMembers } from "./fathom/api";
 import type { Team } from "./types/Types";
 import { TeamActions } from "./actions/TeamActions";
 import { useDebouncedValue } from "./utils/debounce";
-import { getTeamColor } from "./utils/teamColors";
+import { useTeamColor } from "./hooks/useTeamColor";
 
 export default function Command() {
   const [query, setQuery] = useState<string>("");
@@ -54,17 +54,7 @@ function TeamListItem({ team, onRefresh }: { team: Team; onRefresh: () => void }
     keepPreviousData: true,
   });
 
-  // Fetch team color asynchronously
-  const { data: teamColor } = useCachedPromise(
-    async (teamName: string) => {
-      return await getTeamColor(teamName);
-    },
-    [team.name],
-    {
-      initialData: undefined,
-      keepPreviousData: true,
-    },
-  );
+  const teamColor = useTeamColor(team.name);
 
   const teamMembers = membersPage?.items ?? [];
   const memberCount = teamMembers.length;

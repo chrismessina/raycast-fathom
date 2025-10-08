@@ -1,9 +1,8 @@
 import { List, Icon } from "@raycast/api";
-import { useCachedPromise } from "@raycast/utils";
 import { useState, useMemo } from "react";
 import type { Meeting, ActionItem } from "./types/Types";
 import { buildActionItemsCopyText } from "./components/ActionItems";
-import { getTeamColor } from "./utils/teamColors";
+import { useTeamColor } from "./hooks/useTeamColor";
 import { ActionItemActions } from "./actions/ActionItemActions";
 
 export function MeetingActionItemsDetail({ meeting }: { meeting: Meeting; recordingId?: string }) {
@@ -105,19 +104,7 @@ function ActionItemListItem({
 }) {
   const assigneeText = item.assignee.name || item.assignee.email || "Unassigned";
   const aiBadge = !item.userGenerated ? "✨" : "";
-
-  // Fetch team color if assignee has a team
-  const { data: teamColor } = useCachedPromise(
-    async (teamName: string | null) => {
-      if (!teamName) return undefined;
-      return await getTeamColor(teamName);
-    },
-    [item.assignee.team],
-    {
-      initialData: undefined,
-      keepPreviousData: true,
-    },
-  );
+  const teamColor = useTeamColor(item.assignee.team);
 
   const accessories: List.Item.Accessory[] = [];
 

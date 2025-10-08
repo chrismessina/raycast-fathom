@@ -1,26 +1,13 @@
 import { List, Icon } from "@raycast/api";
-import { useCachedPromise } from "@raycast/utils";
 import type { Meeting } from "../types/Types";
 import { formatDate, formatDuration } from "../utils/dates";
 import { MeetingActions } from "../actions/MeetingActions";
-import { getTeamColor } from "../utils/teamColors";
+import { useTeamColor } from "../hooks/useTeamColor";
 
 export function MeetingListItem({ meeting }: { meeting: Meeting }) {
   const createdDate = meeting.createdAt ? formatDate(meeting.createdAt) : "";
   const duration = meeting.durationSeconds ? formatDuration(meeting.durationSeconds) : "";
-
-  // Fetch team color asynchronously
-  const { data: teamColor } = useCachedPromise(
-    async (teamName: string | null | undefined) => {
-      if (!teamName) return undefined;
-      return await getTeamColor(teamName);
-    },
-    [meeting.recordedByTeam],
-    {
-      initialData: undefined,
-      keepPreviousData: true,
-    },
-  );
+  const teamColor = useTeamColor(meeting.recordedByTeam);
 
   return (
     <List.Item

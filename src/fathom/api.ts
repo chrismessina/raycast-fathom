@@ -16,8 +16,30 @@ import { parseTimestamp } from "../utils/dates";
 
 const BASE = "https://api.fathom.ai/external/v1";
 
+// Rate limit configuration
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+const MAX_RETRY_DELAY = 10000; // 10 seconds
+
+/**
+ * Sleep for a specified duration
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Calculate exponential backoff delay with jitter
+ */
+function getRetryDelay(attempt: number): number {
+  const exponentialDelay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, attempt), MAX_RETRY_DELAY);
+  // Add jitter (±25%) to prevent thundering herd
+  const jitter = exponentialDelay * 0.25 * (Math.random() - 0.5);
+  return Math.floor(exponentialDelay + jitter);
+}
+
 // Fetch helpers
-async function authGet<T>(path: string): Promise<T> {
+async function authGet<T>(path: string, retryCount = 0): Promise<T> {
   const apiKey = getApiKey();
   if (!apiKey || apiKey.trim() === "") {
     throw new Error("Fathom API Key is not set. Please configure it in Extension Preferences.");
@@ -35,9 +57,21 @@ async function authGet<T>(path: string): Promise<T> {
     if (res.status === 401) {
       throw new Error("Invalid API Key. Please check your Fathom API Key in Extension Preferences.");
     }
+
+    // Handle rate limiting with exponential backoff
     if (res.status === 429) {
-      throw new Error("Rate limit exceeded. Please wait a moment and try again.");
+      if (retryCount < MAX_RETRIES) {
+        const retryDelay = getRetryDelay(retryCount);
+        console.log(`Rate limited. Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+        await sleep(retryDelay);
+        return authGet<T>(path, retryCount + 1);
+      }
+      // After max retries, throw a more informative error
+      throw new Error(
+        "Rate limit exceeded after multiple retries. The Fathom API is temporarily unavailable. Please try again in a few moments.",
+      );
     }
+
     throw new Error(`HTTP ${res.status} ${res.statusText}`);
   }
 

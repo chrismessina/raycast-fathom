@@ -1,6 +1,6 @@
 # Fathom for Raycast
 
-Search, manage, and review your [Fathom](https://fathom.video/) meetings and recordings. Use the `@fathom` AI extension to ask questions about your meetings, or trigger other AI tasks, for example:
+Search, manage, and review your [Fathom](https://fathom.ai/) meetings and recordings. Use the `@fathom` AI extension to ask questions about your meetings, or trigger other AI tasks, for example:
 > summarize my last meeting in @fathom and create tasks in @todoist
 
 ## Getting started

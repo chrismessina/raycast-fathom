@@ -132,7 +132,6 @@ export function TeamMemberActions(props: {
               shortcut={{ modifiers: ["cmd", "opt"], key: "v" }}
             />
             <Action
-              // eslint-disable-next-line @raycast/prefer-title-case
               title={`Export All ${teamName ? `${teamName} ` : ""}Members as CSV`}
               onAction={async () => {
                 await exportTeamMembers({

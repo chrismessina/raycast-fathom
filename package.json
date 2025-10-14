@@ -49,7 +49,7 @@
     "fathom-typescript": "0.0.30"
   },
   "devDependencies": {
-    "@raycast/eslint-config": "^2.0.4",
+    "@raycast/eslint-config": "^2.1.1",
     "@raycast/utils": "^2.2.1",
     "@types/node": "^20.17.10",
     "@types/react": "19.1.13",

@@ -4,7 +4,7 @@ import { getTeamColor } from "../utils/teamColors";
 /**
  * Custom hook to fetch team color with built-in error handling
  * Gracefully handles rate limits and API failures by returning undefined
- * 
+ *
  * @param teamName - The name of the team to fetch color for
  * @returns The team color hex string or undefined if unavailable
  */

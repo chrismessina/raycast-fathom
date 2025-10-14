@@ -104,12 +104,7 @@ export function TeamActions(props: {
             icon={Icon.AddPerson}
             shortcut={{ modifiers: ["cmd", "shift"], key: "e" }}
           />
-          <Action
-            // eslint-disable-next-line @raycast/prefer-title-case
-            title="Export Team as CSV"
-            onAction={exportTeamMembersAsCSV}
-            icon={Icon.Download}
-          />
+          <Action title="Export Team as CSV" onAction={exportTeamMembersAsCSV} icon={Icon.Download} />
         </>
       )}
       <Action

@@ -1,6 +1,6 @@
 /**
  * Singleton cache manager to coordinate caching across all views
- * 
+ *
  * Features:
  * - Prevents duplicate cache operations
  * - Shares cached data across all components
@@ -11,12 +11,7 @@
 import { showToast, Toast } from "@raycast/api";
 import { listMeetings } from "../fathom/api";
 import type { MeetingFilter, Meeting } from "../types/Types";
-import {
-  cacheMeeting,
-  getAllCachedMeetings,
-  pruneCache,
-  type CachedMeetingData,
-} from "./cache";
+import { cacheMeeting, getAllCachedMeetings, pruneCache, type CachedMeetingData } from "./cache";
 import { globalQueue } from "./requestQueue";
 
 const CACHE_SIZE = 50; // Keep most recent 50 meetings
@@ -39,7 +34,7 @@ class CacheManager {
   subscribe(listener: CacheListener): () => void {
     this.listeners.add(listener);
     console.log(`[CacheManager] Subscriber added (total: ${this.listeners.size})`);
-    
+
     // Immediately notify with current data if loaded
     if (this.isLoaded) {
       listener(this.cachedMeetings);
@@ -105,10 +100,10 @@ class CacheManager {
     // Check cooldown to prevent rapid re-fetches
     const now = Date.now();
     const timeSinceLastFetch = now - this.lastFetchTime;
-    
+
     if (timeSinceLastFetch < this.FETCH_COOLDOWN) {
       console.log(
-        `[CacheManager] Fetch cooldown active (${Math.round((this.FETCH_COOLDOWN - timeSinceLastFetch) / 1000)}s remaining), using cached data`
+        `[CacheManager] Fetch cooldown active (${Math.round((this.FETCH_COOLDOWN - timeSinceLastFetch) / 1000)}s remaining), using cached data`,
       );
       return this.cachedMeetings.map((cached) => cached.meeting as Meeting);
     }
@@ -128,10 +123,10 @@ class CacheManager {
       async () => {
         console.log(`[CacheManager] Executing API call for: ${filterKey}`);
         const apiResult = await listMeetings(filter);
-        
+
         // Cache the results
         await this.cacheApiResults(apiResult.items);
-        
+
         return apiResult.items;
       },
       1, // Priority: 1 (normal)
@@ -145,8 +140,11 @@ class CacheManager {
    */
   private async cacheApiResults(meetings: Meeting[]): Promise<void> {
     // Create a hash of the meeting IDs to detect duplicates
-    const dataHash = meetings.map((m) => m.recordingId).sort().join(",");
-    
+    const dataHash = meetings
+      .map((m) => m.recordingId)
+      .sort()
+      .join(",");
+
     if (this.lastApiDataHash === dataHash) {
       console.log("[CacheManager] Skipping cache - same data already processed");
       return;

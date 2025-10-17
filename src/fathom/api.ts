@@ -68,7 +68,7 @@ async function authGet<T>(path: string, retryCount = 0): Promise<T> {
         const retryDelay = getRetryDelay(retryCount);
         console.log(
           `[API] ⚠️  RATE LIMITED on ${path} - Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})\n` +
-          `      Called from: ${caller}`
+            `      Called from: ${caller}`,
         );
         await sleep(retryDelay);
         return authGet<T>(path, retryCount + 1);

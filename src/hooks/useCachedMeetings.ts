@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MeetingFilter, Meeting, ActionItem } from "../types/Types";
-import {
-  searchCachedMeetings,
-  type CachedMeetingData,
-} from "../utils/cache";
+import { searchCachedMeetings, type CachedMeetingData } from "../utils/cache";
 import { cacheManager } from "../utils/cacheManager";
 
 interface UseCachedMeetingsOptions {
@@ -57,7 +54,7 @@ export function useCachedMeetings(options: UseCachedMeetingsOptions = {}): UseCa
         setIsLoading(true);
         const cached = await cacheManager.loadCache();
         setCachedMeetings(cached);
-        
+
         // Only fetch from API if cache is empty or stale
         if (cached.length === 0) {
           console.log("[useCachedMeetings] Cache empty, fetching from API");

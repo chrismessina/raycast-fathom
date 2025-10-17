@@ -1,6 +1,6 @@
 /**
  * Global request queue to prevent simultaneous API calls and rate limiting
- * 
+ *
  * Features:
  * - Request deduplication (multiple callers get the same promise)
  * - Concurrency limiting (max N requests at once)
@@ -31,11 +31,7 @@ class RequestQueue {
    * Add a request to the queue with deduplication
    * If the same request is already in flight, return the existing promise
    */
-  async enqueue<T>(
-    key: string,
-    execute: () => Promise<T>,
-    priority: number = 0,
-  ): Promise<T> {
+  async enqueue<T>(key: string, execute: () => Promise<T>, priority: number = 0): Promise<T> {
     // Check if request is already in flight
     const existing = this.inFlight.get(key);
     if (existing) {

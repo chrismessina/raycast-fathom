@@ -506,10 +506,15 @@ export async function listTeamMembers(
   try {
     const client = getFathomClient();
 
-    const response = await client.listTeamMembers({
+    // Build request params, only include team if it's defined
+    const requestParams: { cursor?: string; team?: string } = {
       cursor: args.cursor,
-      team: teamId,
-    });
+    };
+    if (teamId) {
+      requestParams.team = teamId;
+    }
+
+    const response = await client.listTeamMembers(requestParams);
 
     const items = response.items.map((tm) => convertSDKTeamMember(tm, teamId));
     const nextCursor = response.nextCursor || undefined;

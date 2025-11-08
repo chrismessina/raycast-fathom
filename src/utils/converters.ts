@@ -52,7 +52,9 @@ export function convertSDKMeeting(m: SDKMeeting): Meeting {
     calendarInvitees: m.calendarInvitees.map((inv) => inv.email).filter((email): email is string => email != null),
     calendarInviteesDomains: Array.from(
       new Set(
-        m.calendarInvitees.map((inv) => inv.email?.split("@")[1]).filter((domain): domain is string => domain != null && domain !== ""),
+        m.calendarInvitees
+          .map((inv) => inv.email?.split("@")[1])
+          .filter((domain): domain is string => domain != null && domain !== ""),
       ),
     ),
   };

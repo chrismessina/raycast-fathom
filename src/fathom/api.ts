@@ -1,12 +1,4 @@
-import type {
-  MeetingFilter,
-  Paginated,
-  Meeting,
-  Summary,
-  Transcript,
-  Team,
-  TeamMember,
-} from "../types/Types";
+import type { MeetingFilter, Paginated, Meeting, Summary, Transcript, Team, TeamMember } from "../types/Types";
 import { getFathomClient, getApiKey } from "./client";
 import { isNumber, toStringOrUndefined } from "../utils/typeGuards";
 import { convertSDKMeeting, convertSDKTeam, convertSDKTeamMember } from "../utils/converters";
@@ -115,6 +107,7 @@ export async function listMeetings(filter: MeetingFilter): Promise<Paginated<Mee
     let nextCursor: string | undefined = undefined;
 
     for await (const response of result) {
+      if (!response) continue;
       const meetingListResponse = response.result;
       items.push(...meetingListResponse.items.map(convertSDKMeeting));
       nextCursor = meetingListResponse.nextCursor || undefined;
@@ -345,7 +338,6 @@ function mapMeetingFromHTTP(raw: unknown): Meeting | undefined {
     teamName: null,
   };
 }
-
 
 export async function getMeetingSummary(recordingId: string): Promise<Summary> {
   logger.log(`[API] 📝 getMeetingSummary called for recordingId: ${recordingId}`);

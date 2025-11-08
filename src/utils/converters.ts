@@ -26,8 +26,8 @@ export function convertSDKMeeting(m: SDKMeeting): Meeting {
   const recordingId = String(m.recordingId);
 
   // Extract team info from recordedBy
-  const recordedByTeam = m.recordedBy.team || undefined;
-  const recordedByName = m.recordedBy.name || undefined;
+  const recordedByTeam = m.recordedBy?.team;
+  const recordedByName = m.recordedBy?.name;
 
   // Extract action items count
   const actionItemsCount = m.actionItems?.length || 0;
@@ -96,4 +96,3 @@ export function convertSDKTeamMember(tm: SDKTeamMemberWithExtras, teamName?: str
     team: teamFromSDK || teamName || undefined,
   };
 }
-

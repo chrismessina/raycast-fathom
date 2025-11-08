@@ -170,7 +170,7 @@ export function MeetingActions(props: { meeting: Meeting; onRefresh?: () => Prom
       <MeetingCopyActions meeting={meeting} />
       <MeetingOpenActions meeting={meeting} />
       <MeetingExportActions meeting={meeting} recordingId={recordingId} />
-      
+
       {onRefresh && (
         <ActionPanel.Section>
           <RefreshCacheAction onRefresh={onRefresh} />

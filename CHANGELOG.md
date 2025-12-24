@@ -1,13 +1,6 @@
 # Fathom for Raycast Changelog
 
-## Fix full text search - {PR_MERGE_DATE}
-
-### Changed
-
-- Updated search implementation to include meeting summaries and transcripts in search index
-- Added comprehensive logging for search performance monitoring
-
-## Update to Fathom SDK 0.0.36 - 2025-11-09
+## Update to Fathom SDK 0.0.36 - {PR_MERGE_DATE}
 
 ### Changed
 

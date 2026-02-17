@@ -9,6 +9,7 @@ The `src/search-meetings.tsx` command has been completely rebuilt using modern R
 ### ✅ Removed Unnecessary Complexity
 
 **Before (96 lines):**
+
 - Manual state management with `useState`, `useEffect`, `useMemo`
 - Custom debouncing logic
 - Manual pagination handling
@@ -17,6 +18,7 @@ The `src/search-meetings.tsx` command has been completely rebuilt using modern R
 - Dropdown filters that weren't functional
 
 **After (76 lines):**
+
 - Clean `useCachedPromise` for data fetching
 - Built-in Raycast filtering with `filtering={true}`
 - Automatic error handling
@@ -26,6 +28,7 @@ The `src/search-meetings.tsx` command has been completely rebuilt using modern R
 ### ✅ Better UI Implementation
 
 **Improvements:**
+
 1. **List.Item title** - Shows Fathom's generated title (`meeting.title`)
 2. **List.Item subtitle** - Shows calendar event title (`meeting.meetingTitle`)
 3. **Accessories** - Now uses proper API fields:
@@ -38,6 +41,7 @@ The `src/search-meetings.tsx` command has been completely rebuilt using modern R
 ### ✅ Uses New API Fields
 
 The refactored code now leverages the aligned types:
+
 - `meeting.createdAt` - When the recording was created
 - `meeting.meetingTitle` - Calendar event title (distinct from Fathom's title)
 - `meeting.recordedByTeam` - Team name of the recorder
@@ -59,19 +63,23 @@ meetings.map((meeting) => <MeetingListItem meeting={meeting} />)
 ## Features
 
 ### 1. **Automatic Search**
+
 - Raycast's built-in search (set `filtering={true}`)
 - Searches across title and subtitle
 - No manual debouncing needed
 
 ### 2. **Error Handling**
+
 - Shows friendly error message if API fails
 - Displays API key configuration errors clearly
 
 ### 3. **Empty State**
+
 - Shows "No Meetings Found" when list is empty
 - Clear messaging for new users
 
 ### 4. **Caching**
+
 - `useCachedPromise` automatically caches results
 - Fast subsequent loads
 - Raycast handles cache invalidation
@@ -115,13 +123,14 @@ A meeting will display like this:
 ```
 📹 Weekly Standup
    Daily Team Sync
-   
+
    📅 Jan 15, 2025    Engineering    ⏰ 30m
 ```
 
 ## API Key Configuration
 
 The command automatically uses the API key from Raycast preferences:
+
 - **Preference**: `fathomApiKey`
 - **Location**: Extension Preferences → Fathom API Key
 - **Error handling**: Clear error message if missing/invalid

@@ -9,12 +9,14 @@ When the Search Meetings command loads for the first time with an empty cache, a
 ### Initial Load (Empty Cache)
 
 **1. Start Caching**
-```
+
+```text
 🔄 Caching 1 of 50 meetings
 ```
 
 **2. Progress Updates**
-```
+
+```text
 🔄 Caching 2 of 50 meetings
 🔄 Caching 3 of 50 meetings
 ...
@@ -22,7 +24,8 @@ When the Search Meetings command loads for the first time with an empty cache, a
 ```
 
 **3. Success**
-```
+
+```text
 ✅ Cached 50 meetings
    Full-text search now available
 ```
@@ -34,7 +37,8 @@ No toast is shown - meetings load instantly from cache.
 ### Error State
 
 If caching fails:
-```
+
+```text
 ❌ Failed to cache meetings
    [Error message]
 ```
@@ -42,22 +46,26 @@ If caching fails:
 ## Implementation Details
 
 ### When Toast Shows
+
 - **Condition**: Cache is empty AND meetings are being fetched
 - **Trigger**: First time user opens Search Meetings
 - **Frequency**: Only on initial cache population
 
 ### When Toast Doesn't Show
+
 - Cache already has meetings (subsequent loads)
 - No meetings returned from API
 - Caching is disabled
 
 ### Toast Updates
+
 - **Style**: `Toast.Style.Animated` during caching
 - **Title**: Updates for each meeting cached
 - **Final Style**: `Toast.Style.Success` on completion
 - **Message**: "Full-text search now available"
 
 ### Progress Tracking
+
 ```typescript
 // Show progress toast only if cache was empty
 const shouldShowProgress = cachedMeetings.length === 0 && totalMeetings > 0;
@@ -65,7 +73,7 @@ const shouldShowProgress = cachedMeetings.length === 0 && totalMeetings > 0;
 // Update toast for each meeting
 for (let i = 0; i < meetings.length; i++) {
   await cacheMeeting(...);
-  
+
   if (progressToast) {
     progressToast.title = `Caching ${i + 1} of ${totalMeetings} meetings`;
   }
@@ -108,7 +116,7 @@ progressToast.message = "Full-text search now available";
 
 ### Progress Toast Sequence
 
-```
+```text
 Frame 1 (0s):
 ┌─────────────────────────────────┐
 │ 🔄 Caching 1 of 50 meetings     │
@@ -138,7 +146,7 @@ Frame 5 (1.1s):
 
 ### Error Toast
 
-```
+```text
 ┌─────────────────────────────────┐
 │ ❌ Failed to cache meetings      │
 │    Network error: timeout       │
@@ -152,6 +160,7 @@ Frame 5 (1.1s):
 **Lines**: 80-144 (Cache effect with progress toast)
 
 **Key Logic**:
+
 ```typescript
 // Only show progress if cache is empty
 const shouldShowProgress = cachedMeetings.length === 0 && totalMeetings > 0;
@@ -176,6 +185,7 @@ progressToast.message = "Full-text search now available";
 ### Test Scenarios
 
 **1. First Load (Empty Cache)**
+
 ```bash
 # Clear cache first
 # Then run: npm run dev
@@ -184,6 +194,7 @@ progressToast.message = "Full-text search now available";
 ```
 
 **2. Subsequent Load (Cache Exists)**
+
 ```bash
 # Run: npm run dev
 # Open "Search Meetings" (second time)
@@ -191,12 +202,14 @@ progressToast.message = "Full-text search now available";
 ```
 
 **3. Manual Refresh**
+
 ```bash
 # In empty state, click "Refresh Cache"
 # Expected: "Refreshing meetings..." then progress toast
 ```
 
 **4. Error Handling**
+
 ```bash
 # Disconnect network
 # Clear cache and open "Search Meetings"
@@ -224,6 +237,7 @@ progressToast.message = "Full-text search now available";
 ## Future Enhancements
 
 Potential improvements:
+
 1. **Batch Updates**: Update toast every 5 meetings instead of every meeting
 2. **Percentage**: Show "Caching... 50%" instead of counts
 3. **Estimated Time**: "Caching... ~30s remaining"

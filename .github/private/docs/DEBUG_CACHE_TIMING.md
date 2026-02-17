@@ -3,6 +3,7 @@
 ## Issue Description
 
 When loading Search Meetings with a clear cache:
+
 - **Expected**: Toast appears immediately showing "Caching 1 of 50 meetings"
 - **Actual**: 3-5 second delay, then toast shows only "Cached 10 meetings"
 
@@ -13,6 +14,7 @@ When loading Search Meetings with a clear cache:
 **Issue**: The UI was applying date filters BEFORE caching, so only meetings from the last month were being cached.
 
 **Original Flow** (BROKEN):
+
 ```
 1. API fetches ALL meetings (no filter)
 2. UI filters to last month's meetings (e.g., 10 meetings)
@@ -20,6 +22,7 @@ When loading Search Meetings with a clear cache:
 ```
 
 **Fixed Flow**:
+
 ```
 1. API fetches ALL meetings (no filter)
 2. ALL meetings get cached (e.g., 50 meetings)
@@ -31,6 +34,7 @@ When loading Search Meetings with a clear cache:
 The delay is likely caused by the timing of when effects run:
 
 **Effect Execution Order**:
+
 1. Component mounts
 2. `useCachedMeetings` hook initializes
 3. **Effect 1**: Load cached meetings from storage (empty on first run)
@@ -43,8 +47,9 @@ The delay is likely caused by the timing of when effects run:
 ### Console Log Format
 
 All logs are prefixed for easy filtering:
+
 - `[Cache]` - Cache-related operations
-- `[API]` - API fetch operations  
+- `[API]` - API fetch operations
 - `[UI]` - UI filtering/display operations
 
 ### What to Look For
@@ -85,6 +90,7 @@ When you run the extension with a clear cache, you should see:
 ### First Load (Empty Cache)
 
 **Timeline**:
+
 ```
 0ms:   Component mounts
 10ms:  [Cache] Loaded 0 cached meetings
@@ -95,6 +101,7 @@ When you run the extension with a clear cache, you should see:
 ```
 
 **Console Output**:
+
 ```
 [Cache] Loading cached meetings from storage...
 [Cache] Loaded 0 cached meetings
@@ -115,6 +122,7 @@ When you run the extension with a clear cache, you should see:
 ### Subsequent Loads (Cache Exists)
 
 **Timeline**:
+
 ```
 0ms:   Component mounts
 10ms:  [Cache] Loaded 50 cached meetings
@@ -122,6 +130,7 @@ When you run the extension with a clear cache, you should see:
 ```
 
 **Console Output**:
+
 ```
 [Cache] Loading cached meetings from storage...
 [Cache] Loaded 50 cached meetings
@@ -132,6 +141,7 @@ When you run the extension with a clear cache, you should see:
 ## Why the Toast Appears Late
 
 The toast can only appear AFTER:
+
 1. ✅ Cache is loaded (instant)
 2. ✅ API fetch completes (3-5 seconds) ← **This is the delay**
 3. ✅ Cache effect runs with API data
@@ -180,6 +190,7 @@ Start fetching meetings as soon as Raycast opens (before user navigates to comma
 ### Clear Cache and Test
 
 1. **Clear cache**:
+
    ```typescript
    // Add temporarily to code or run in console
    import { clearAllCache } from "./utils/cache";
@@ -229,14 +240,17 @@ Start fetching meetings as soon as Raycast opens (before user navigates to comma
 ## Summary
 
 ### What Was Fixed
+
 1. ✅ **Caching all meetings** instead of just filtered ones
 2. ✅ **Added comprehensive logging** to track timing
 3. ✅ **Separated caching from UI filtering** (cache all, filter for display)
 
 ### What's Still Expected
+
 - **3-5 second delay** before toast appears is normal (API fetch time)
 - Toast appears immediately AFTER API responds
 - This is unavoidable without prefetching or showing earlier loading state
 
 ### Recommendation
+
 Consider implementing **Option 1** (show "Loading meetings..." toast earlier) to provide immediate feedback when cache is empty.

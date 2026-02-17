@@ -25,7 +25,7 @@ Replaced API-based colors with **deterministic hash-based colors**:
 ✅ **Instant** - no loading time  
 ✅ **Deterministic** - same team always gets same color  
 ✅ **Consistent** - works across all views and sessions  
-✅ **No rate limiting** - no network requests  
+✅ **No rate limiting** - no network requests
 
 ## Implementation
 
@@ -39,7 +39,7 @@ async function fetchAndCacheTeams() {
     teams.push(...result.items);
     cursor = result.nextCursor;
   } while (cursor);
-  
+
   // Build color map
   teams.forEach((team, index) => {
     colorMap.set(team.name, TEAM_COLORS[index % TEAM_COLORS.length]);
@@ -48,6 +48,7 @@ async function fetchAndCacheTeams() {
 ```
 
 **Problems:**
+
 - Multiple API calls (pagination)
 - Slow (network latency)
 - Rate limiting (too many requests)
@@ -61,7 +62,7 @@ function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
   return Math.abs(hash);
@@ -70,7 +71,7 @@ function hashString(str: string): number {
 // Get color instantly
 export function getTeamColor(teamName: string | null | undefined): string | undefined {
   if (!teamName) return undefined;
-  
+
   const hash = hashString(teamName);
   const colorIndex = hash % TEAM_COLORS.length;
   return TEAM_COLORS[colorIndex];
@@ -78,6 +79,7 @@ export function getTeamColor(teamName: string | null | undefined): string | unde
 ```
 
 **Benefits:**
+
 - Zero API calls
 - Instant (pure computation)
 - No rate limiting
@@ -86,6 +88,7 @@ export function getTeamColor(teamName: string | null | undefined): string | unde
 ## Files Changed
 
 ### 1. `src/utils/teamColors.ts`
+
 - ✅ Removed all API calls
 - ✅ Removed caching logic
 - ✅ Added `hashString()` function
@@ -93,12 +96,14 @@ export function getTeamColor(teamName: string | null | undefined): string | unde
 - ✅ Simplified to ~70 lines (was ~146 lines)
 
 ### 2. `src/hooks/useTeamColor.ts`
+
 - ✅ Removed `useCachedPromise`
 - ✅ Removed async logic
 - ✅ Simplified to direct function call
 - ✅ Reduced to ~14 lines (was ~36 lines)
 
 ### 3. `src/components/MeetingListItem.tsx`
+
 - ✅ Re-enabled team colors
 - ✅ No changes needed (hook API stayed the same)
 
@@ -109,9 +114,9 @@ export function getTeamColor(teamName: string | null | undefined): string | unde
 The hash function ensures that the same team name **always** produces the same color:
 
 ```typescript
-getTeamColor("Engineering")  // Always returns "#FF6B6B" (red)
-getTeamColor("Design")       // Always returns "#4ECDC4" (teal)
-getTeamColor("Engineering")  // Still "#FF6B6B" (red)
+getTeamColor("Engineering"); // Always returns "#FF6B6B" (red)
+getTeamColor("Design"); // Always returns "#4ECDC4" (teal)
+getTeamColor("Engineering"); // Still "#FF6B6B" (red)
 ```
 
 ### Distribution
@@ -127,6 +132,7 @@ The hash function distributes team names evenly across the 20-color palette:
 ### Test Cases
 
 1. **Same team, same color:**
+
    ```typescript
    const color1 = getTeamColor("Sales");
    const color2 = getTeamColor("Sales");
@@ -134,6 +140,7 @@ The hash function distributes team names evenly across the 20-color palette:
    ```
 
 2. **Different teams, likely different colors:**
+
    ```typescript
    const engineering = getTeamColor("Engineering");
    const design = getTeamColor("Design");
@@ -208,8 +215,8 @@ If you want to let users customize team colors:
 ```typescript
 // Store in LocalStorage
 const customColors = {
-  "Engineering": "#FF0000",
-  "Design": "#00FF00",
+  Engineering: "#FF0000",
+  Design: "#00FF00",
 };
 
 export function getTeamColor(teamName: string): string {
@@ -217,7 +224,7 @@ export function getTeamColor(teamName: string): string {
   if (customColors[teamName]) {
     return customColors[teamName];
   }
-  
+
   // Fall back to hash-based
   const hash = hashString(teamName);
   return TEAM_COLORS[hash % TEAM_COLORS.length];
@@ -244,12 +251,14 @@ But keep colors hash-based for performance!
 ## Summary
 
 **Before:**
+
 - 🐌 Slow (API calls)
 - ⚠️ Rate limiting risk
 - 💾 Complex caching
 - 🔄 Cache expiry issues
 
 **After:**
+
 - ⚡ Instant (pure computation)
 - ✅ Zero rate limiting
 - 🎯 Simple & deterministic

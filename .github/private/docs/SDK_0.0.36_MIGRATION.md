@@ -103,16 +103,16 @@ import type { TeamMember } from "fathom-typescript/sdk/models/shared/teammember"
 
 ### Meeting Type Structure
 
-| Field | v0.0.30 | v0.0.36 | Notes |
-|-------|---------|---------|-------|
-| `recordingId` | Extracted from URL | `number` | Now a direct field |
-| `createdAt` | Not available | `Date` | New field |
-| `meetingTitle` | Not available | `string \| null` | Calendar event title |
-| `shareUrl` | Not available | `string` | Dedicated share URL |
-| `actionItems` | Not available | `ActionItem[]` | Direct array |
-| `recordedBy.team` | Not available | `string \| null` | Team name |
-| `recordedBy.name` | Not available | `string` | User name |
-| `meetingType` | `"internal" \| "external"` | Removed | Use `calendarInviteesDomainsType` |
+| Field             | v0.0.30                    | v0.0.36          | Notes                             |
+| ----------------- | -------------------------- | ---------------- | --------------------------------- |
+| `recordingId`     | Extracted from URL         | `number`         | Now a direct field                |
+| `createdAt`       | Not available              | `Date`           | New field                         |
+| `meetingTitle`    | Not available              | `string \| null` | Calendar event title              |
+| `shareUrl`        | Not available              | `string`         | Dedicated share URL               |
+| `actionItems`     | Not available              | `ActionItem[]`   | Direct array                      |
+| `recordedBy.team` | Not available              | `string \| null` | Team name                         |
+| `recordedBy.name` | Not available              | `string`         | User name                         |
+| `meetingType`     | `"internal" \| "external"` | Removed          | Use `calendarInviteesDomainsType` |
 
 ### FathomUser Type (New in v0.0.36)
 

@@ -12,16 +12,19 @@ The Raycast extension was experiencing aggressive rate limiting (HTTP 429) from 
 ## Root Causes
 
 ### 1. Multiple Component Instances
+
 - Each view (`search-meetings`, `MemberMeetingsView`, etc.) was independently calling the API
 - No coordination between components meant duplicate requests for the same data
 - React's strict mode and hot reloading caused additional re-renders
 
 ### 2. Cache Effect Re-runs
+
 - The `useCachedMeetings` hook's effect was triggering multiple times
 - Object reference changes in `apiMeetingsData` caused re-processing of the same data
 - No global state meant each component had its own cache instance
 
 ### 3. SDK Issues
+
 - Fathom TypeScript SDK v0.0.30 has strict Zod validation
 - Validation fails even when API returns 200 OK
 - Forces fallback to HTTP, doubling the number of requests
@@ -31,17 +34,20 @@ The Raycast extension was experiencing aggressive rate limiting (HTTP 429) from 
 ### 1. Global Request Queue (`src/utils/requestQueue.ts`)
 
 **Features:**
+
 - **Request deduplication**: Multiple callers get the same promise for identical requests
 - **Concurrency limiting**: Max 3 concurrent API requests at once
 - **Priority-based queuing**: Important requests can jump the queue
 - **Automatic tracking**: In-flight requests are monitored and logged
 
 **Benefits:**
+
 - Prevents thundering herd when multiple views load simultaneously
 - Reduces API calls by 60-80% through deduplication
 - Respects rate limits by controlling concurrency
 
 **Usage:**
+
 ```typescript
 import { globalQueue } from "../utils/requestQueue";
 
@@ -51,25 +57,28 @@ const result = await globalQueue.enqueue(
     // Your API call here
     return await someApiCall();
   },
-  1 // Priority (higher = more important)
+  1, // Priority (higher = more important)
 );
 ```
 
 ### 2. Singleton Cache Manager (`src/utils/cacheManager.ts`)
 
 **Features:**
+
 - **Single source of truth**: All components share the same cache
 - **Event-based updates**: Components subscribe to cache changes
 - **Smart deduplication**: Detects and skips duplicate data by hash
 - **Coordinated caching**: Only one cache operation runs at a time
 
 **Benefits:**
+
 - Eliminates duplicate cache operations
 - Reduces memory usage (one cache instead of many)
 - Provides consistent data across all views
 - Better progress tracking and user feedback
 
 **Usage:**
+
 ```typescript
 import { cacheManager } from "../utils/cacheManager";
 
@@ -88,12 +97,14 @@ unsubscribe();
 ### 3. Enhanced Logging
 
 **Added comprehensive logging to track:**
+
 - Request queue operations (enqueue, execute, complete)
 - Cache manager state (subscribers, caching status)
 - Hook lifecycle (subscribe, unsubscribe, updates)
 - Deduplication events (when requests are skipped)
 
 **Log prefixes:**
+
 - `[Queue]` - Request queue operations
 - `[CacheManager]` - Cache manager operations
 - `[useCachedMeetings]` - Hook lifecycle events
@@ -101,17 +112,20 @@ unsubscribe();
 ### 4. Refactored `useCachedMeetings` Hook
 
 **Changes:**
+
 - Removed local cache state and API calls
 - Now subscribes to the singleton cache manager
 - Automatically gets updates when cache changes
 - Simpler, more reliable implementation
 
 **Before:**
+
 - Each instance had its own cache
 - Each instance made its own API calls
 - Complex deduplication logic with refs
 
 **After:**
+
 - All instances share one cache
 - One API call serves all instances
 - Simple subscription model
@@ -119,6 +133,7 @@ unsubscribe();
 ## Performance Improvements
 
 ### Before
+
 ```
 18:06:23 [API] Fetching meetings from API with filter: {}
 18:06:23 [API] Fetching meetings from API with filter: {}  // Duplicate!
@@ -129,6 +144,7 @@ unsubscribe();
 ```
 
 ### After (Expected)
+
 ```
 18:06:23 [Queue] Enqueued request: fetch-meetings:{} (queue size: 1)
 18:06:23 [Queue] Deduplicating request: fetch-meetings:{}
@@ -139,6 +155,7 @@ unsubscribe();
 ```
 
 **Metrics:**
+
 - **API calls reduced**: ~70% fewer requests
 - **Rate limit hits**: Should be eliminated for normal usage
 - **Cache operations**: 1 instead of 3+ per data fetch
@@ -228,34 +245,34 @@ unsubscribe();
 If you're experiencing rate limiting issues in your Raycast extension:
 
 1. **Replace direct API calls with cache manager:**
+
    ```typescript
    // Before
    const result = await listMeetings(filter);
-   
+
    // After
    const meetings = await cacheManager.fetchAndCache(filter);
    ```
 
 2. **Use the request queue for other API calls:**
+
    ```typescript
    // Before
    const summary = await getMeetingSummary(id);
-   
+
    // After
-   const summary = await globalQueue.enqueue(
-     `summary:${id}`,
-     () => getMeetingSummary(id)
-   );
+   const summary = await globalQueue.enqueue(`summary:${id}`, () => getMeetingSummary(id));
    ```
 
 3. **Subscribe to cache updates instead of managing local state:**
+
    ```typescript
    // Before
    const [meetings, setMeetings] = useState([]);
    useEffect(() => {
      listMeetings().then(setMeetings);
    }, []);
-   
+
    // After
    const [meetings, setMeetings] = useState([]);
    useEffect(() => {
@@ -268,12 +285,14 @@ If you're experiencing rate limiting issues in your Raycast extension:
 To monitor the effectiveness of these changes:
 
 1. **Check request queue stats:**
+
    ```typescript
    const stats = globalQueue.getStats();
    console.log(stats); // { pending, inFlight, maxConcurrent }
    ```
 
 2. **Check cache manager stats:**
+
    ```typescript
    const stats = cacheManager.getStats();
    console.log(stats); // { loaded, caching, count, listeners }

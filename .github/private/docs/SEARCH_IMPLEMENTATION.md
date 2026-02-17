@@ -97,8 +97,8 @@ Stores meetings with their summaries and transcripts:
 await cacheMeeting(
   meeting.recordingId,
   meeting,
-  meeting.summaryText,      // AI summary
-  meeting.transcriptText,   // Full transcript
+  meeting.summaryText, // AI summary
+  meeting.transcriptText, // Full transcript
   meeting.actionItems,
 );
 ```

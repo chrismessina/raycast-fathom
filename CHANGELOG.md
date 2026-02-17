@@ -1,12 +1,28 @@
 # Fathom for Raycast Changelog
 
-## Updated Dependencies - {PR_MERGE_DATE}
+## Lazy Pagination & Smart Cache - {PR_MERGE_DATE}
 
-- Updated `fathom-typescript` dependency from 0.0.36 to 0.0.37
-- Updated `@raycast/api` dependency from 1.103.2 to 1.104.5
-- Updated `@raycast/utils` dependency from 2.2.1 to 2.2.2
-- Updated `prettier` dependency from 3.6.2 to 3.8.1
-- Removed `calendarInvitees` parameter from SDK call with explanatory comment about HTTP fallback
+### Added
+
+- **Lazy pagination**: Load ~50 meetings initially, ⌘-L to fetch 50 more on demand
+- **Smart cache refresh**: 5-minute staleness detection for automatic background refresh
+- **Full-text search**: Search across meeting titles, summaries, and transcripts
+- **Cursor-based pagination**: Maintains position across sessions for incremental loading
+- **Load more action**: "Load Older Meetings" (⌘-L) with dynamic visibility based on availability
+
+### Changed
+
+- **Direct HTTP API**: Removed `fathom-typescript` SDK dependency for better control
+- **Improved toast messages**: Clearer distinction between "Fetching from API" and "Saving to cache"
+- **Instant loading**: Cached meetings display immediately while fresh data loads in background
+- **Cache architecture**: New `cacheManager.ts` with pagination state and staleness tracking
+- **Removed extraneous docs**: relocated a bunch of leftover docs that are no longer relevant
+
+### Fixed
+
+- **Performance**: Eliminated redundant API calls on every search/launch with 5-min cooldown
+- **UX clarity**: Toast messages now clearly indicate what's happening (fetching vs caching vs ready)
+- **SDK issues**: Resolved SDK validation failures by using direct HTTP requests
 
 ## Improve Full-Text Search - 2025-12-25
 

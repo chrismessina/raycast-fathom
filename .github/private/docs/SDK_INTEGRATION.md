@@ -18,6 +18,7 @@ const meetings = await client.listMeetings({});
 ```
 
 **Key features:**
+
 - **Singleton pattern**: Client is cached for performance
 - **Type-safe**: Full TypeScript support from the SDK
 - **Error handling**: Clear errors if API key is missing
@@ -28,6 +29,7 @@ const meetings = await client.listMeetings({});
 The API layer converts SDK responses to the extension's internal types:
 
 **SDK Methods Used:**
+
 - `client.listMeetings()` - Returns paginated meeting data
 - `client.listTeams()` - Returns team list
 - `client.listTeamMembers()` - Returns team member list
@@ -41,13 +43,14 @@ Clean converter functions map SDK types to extension types:
 
 ```typescript
 convertSDKMeeting(sdkMeeting) → Meeting
-convertSDKTeam(sdkTeam) → Team  
+convertSDKTeam(sdkTeam) → Team
 convertSDKTeamMember(sdkMember) → TeamMember
 ```
 
 ## Benefits of This Approach
 
 ### ✅ Before (Old Implementation)
+
 - Mixed SDK and HTTP calls with complex fallbacks
 - Unsafe `require()` and type casting with `unknown`
 - Try-catch blocks around every SDK call
@@ -55,6 +58,7 @@ convertSDKTeamMember(sdkMember) → TeamMember
 - Duplicated error handling
 
 ### ✅ After (New Implementation)
+
 - **Single source of truth**: `client.ts` handles all SDK initialization
 - **Type safety**: Proper TypeScript imports and types
 - **Cleaner code**: No fallback logic, simpler functions
@@ -92,9 +96,9 @@ For advanced use cases, you can use the SDK client directly:
 import { getFathomClient } from "./fathom/client";
 
 const client = getFathomClient();
-const result = await client.listMeetings({ 
+const result = await client.listMeetings({
   includeTranscript: true,
-  includeCrmMatches: true 
+  includeCrmMatches: true,
 });
 
 for await (const page of result) {
@@ -129,6 +133,7 @@ If you need to add a new endpoint:
 ## Configuration
 
 The API key is configured in Raycast preferences:
+
 - **Preference key**: `fathomApiKey`
 - **Type**: Password (secure)
 - **Required**: Yes

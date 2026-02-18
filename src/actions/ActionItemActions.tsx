@@ -1,4 +1,4 @@
-import { ActionPanel, Action, Icon, Keyboard } from "@raycast/api";
+import { ActionPanel, Action, Icon } from "@raycast/api";
 import type { Meeting, ActionItem } from "../types/Types";
 import { MeetingCopyActions, MeetingOpenActions } from "./MeetingActions";
 import { ActionItemDetail } from "../view-action-item-detail";
@@ -28,7 +28,7 @@ export function ActionItemActions({
             title="Jump to Timestamp"
             url={item.recordingPlaybackUrl}
             icon={Icon.Play}
-            shortcut={Keyboard.Shortcut.Common.Open}
+            shortcut={{ modifiers: ["cmd"], key: "o" }}
           />
         )}
       </ActionPanel.Section>
@@ -38,13 +38,13 @@ export function ActionItemActions({
           title="Copy Action Item"
           content={item.description}
           icon={Icon.Clipboard}
-          shortcut={Keyboard.Shortcut.Common.Copy}
+          shortcut={{ modifiers: ["cmd"], key: "c" }}
         />
         <Action.CopyToClipboard
           title="Copy All Action Items"
           content={allItemsCopyContent}
           icon={Icon.CopyClipboard}
-          shortcut={{ modifiers: ["cmd", "opt"], key: "c" }}
+          shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
         />
       </ActionPanel.Section>
 

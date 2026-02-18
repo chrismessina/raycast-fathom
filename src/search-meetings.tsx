@@ -1,42 +1,26 @@
-import { List, ActionPanel, Action, Icon, Detail, showToast, Toast, openExtensionPreferences } from "@raycast/api";
+import { List, ActionPanel, Action, Icon, Detail, showToast, Toast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
-import { useState, useMemo, useCallback } from "react";
-import type { Meeting, Team } from "./types/Types";
+import { useState, useMemo } from "react";
+import type { Meeting } from "./types/Types";
 import { getMeetingSummary, getMeetingTranscript, listTeams } from "./fathom/api";
 import { MeetingDetailActions } from "./actions/MeetingActions";
 import { useCachedMeetings } from "./hooks/useCachedMeetings";
-import { getUserFriendlyError, classifyError, ErrorType } from "./utils/errorHandling";
-import { hasApiKey, isApiKeyKnownInvalid } from "./fathom/auth";
-
+import { getUserFriendlyError } from "./utils/errorHandling";
 import { MeetingListItem } from "./components/MeetingListItem";
 import { RefreshCacheAction } from "./actions/RefreshCacheAction";
 import { getDateRanges } from "./utils/dates";
 
-function Command() {
+export default function Command() {
   const [filterType, setFilterType] = useState<string>("all");
   const [searchText, setSearchText] = useState<string>("");
 
-  // Early API key check — if missing, skip all API calls and show error view
-  const apiKeyPresent = hasApiKey();
-
   const ranges = getDateRanges();
 
-  // Fetch teams for dropdown — wrapped so it never throws (returns empty on any error)
-  const { data: teamsData } = useCachedPromise(
-    async () => {
-      try {
-        return await listTeams({});
-      } catch {
-        return { items: [] as Team[], nextCursor: undefined };
-      }
-    },
-    [],
-    {
-      keepPreviousData: true,
-      initialData: { items: [] as Team[], nextCursor: undefined },
-      execute: apiKeyPresent,
-    },
-  );
+  // Fetch teams for dropdown
+  const { data: teamsData } = useCachedPromise(async () => listTeams({}), [], {
+    keepPreviousData: true,
+    initialData: { items: [], nextCursor: undefined },
+  });
 
   const teams = teamsData?.items ?? [];
 
@@ -53,109 +37,95 @@ function Command() {
   const {
     meetings: cachedMeetings,
     isLoading,
-    error: meetingsError,
+    error,
     searchMeetings,
     refreshCache,
-    loadMore,
-    hasMore,
   } = useCachedMeetings({
     filter: {},
-    enableCache: apiKeyPresent,
+    enableCache: true,
   });
 
-  const loadMoreMeetings = useCallback(async () => {
-    if (!apiKeyPresent) return;
-    await loadMore();
-  }, [apiKeyPresent, loadMore]);
-
-  // Combine error sources: explicit missing key OR runtime API error
-  const error: Error | undefined = !apiKeyPresent
-    ? new Error("API_KEY_MISSING: No API key configured. Please set your Fathom API Key in Extension Preferences.")
-    : isApiKeyKnownInvalid()
-      ? new Error("API_KEY_INVALID: Invalid API Key. Please check your Fathom API Key in Extension Preferences.")
-      : meetingsError;
-
-  const sortByDate = (a: Meeting, b: Meeting) => {
-    const getTime = (meeting: Meeting): number => {
-      const dateStr = meeting.createdAt || meeting.startTimeISO;
-      if (!dateStr) return 0;
-      const time = new Date(dateStr).getTime();
-      return isNaN(time) ? 0 : time;
-    };
-
-    const dateA = getTime(a);
-    const dateB = getTime(b);
-    return dateB - dateA; // Descending (newest first)
-  };
-
   // Filter and search meetings
-  const { thisWeekMeetings, lastWeekMeetings, previousMonthMeetings, olderMeetings, allFilteredMeetings } =
-    useMemo(() => {
-      // Apply full-text search first
-      let allMeetings = searchText ? searchMeetings(searchText) : cachedMeetings;
+  const { thisWeekMeetings, lastWeekMeetings, previousMonthMeetings, allFilteredMeetings } = useMemo(() => {
+    // Apply full-text search first
+    let allMeetings = searchText ? searchMeetings(searchText) : cachedMeetings;
 
-      // Then apply team filter
-      if (filterType.startsWith("team:")) {
-        const teamName = filterType.replace("team:", "");
-        allMeetings = allMeetings.filter(
-          (meeting) => meeting.recordedByTeam === teamName || meeting.teamName === teamName,
-        );
-      }
+    // Then apply team filter
+    if (filterType.startsWith("team:")) {
+      const teamName = filterType.replace("team:", "");
+      allMeetings = allMeetings.filter(
+        (meeting) => meeting.recordedByTeam === teamName || meeting.teamName === teamName,
+      );
+    }
 
-      // If searching or team-filtering, return flat chronological list across ALL meetings
-      if (searchText || filterType !== "all") {
-        const sorted = [...allMeetings].sort(sortByDate);
-        return {
-          thisWeekMeetings: [],
-          lastWeekMeetings: [],
-          previousMonthMeetings: [],
-          olderMeetings: [],
-          allFilteredMeetings: sorted,
-        };
-      }
-
-      // Default view: group by date ranges (no date restriction — shows everything)
-      const thisWeek: Meeting[] = [];
-      const lastWeek: Meeting[] = [];
-      const previousMonth: Meeting[] = [];
-      const older: Meeting[] = [];
-
-      allMeetings.forEach((meeting) => {
+    // Apply date filter for "all" view (for DISPLAY only, not for caching)
+    if (filterType === "all") {
+      allMeetings = allMeetings.filter((meeting) => {
         const meetingDate = new Date(meeting.createdAt || meeting.startTimeISO);
         const meetingTime = meetingDate.getTime();
-
-        if (meetingTime >= ranges.thisWeek.start.getTime() && meetingTime <= ranges.thisWeek.end.getTime()) {
-          thisWeek.push(meeting);
-        } else if (meetingTime >= ranges.lastWeek.start.getTime() && meetingTime <= ranges.lastWeek.end.getTime()) {
-          lastWeek.push(meeting);
-        } else if (
-          meetingTime >= ranges.previousMonth.start.getTime() &&
-          meetingTime <= ranges.previousMonth.end.getTime()
-        ) {
-          previousMonth.push(meeting);
-        } else {
-          older.push(meeting);
-        }
+        return meetingTime >= ranges.previousMonth.start.getTime() && meetingTime <= ranges.thisWeek.end.getTime();
       });
+    }
 
-      thisWeek.sort(sortByDate);
-      lastWeek.sort(sortByDate);
-      previousMonth.sort(sortByDate);
-      older.sort(sortByDate);
-
+    // If filtering is active, return all meetings sorted by date (newest first)
+    if (filterType !== "all") {
+      const sorted = [...allMeetings].sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.startTimeISO).getTime();
+        const dateB = new Date(b.createdAt || b.startTimeISO).getTime();
+        return dateB - dateA; // Descending (newest first)
+      });
       return {
-        thisWeekMeetings: thisWeek,
-        lastWeekMeetings: lastWeek,
-        previousMonthMeetings: previousMonth,
-        olderMeetings: older,
-        allFilteredMeetings: [],
+        thisWeekMeetings: [],
+        lastWeekMeetings: [],
+        previousMonthMeetings: [],
+        allFilteredMeetings: sorted,
       };
-    }, [cachedMeetings, searchMeetings, searchText, filterType, ranges]);
+    }
+
+    // No filter: group by date ranges
+    const thisWeek: Meeting[] = [];
+    const lastWeek: Meeting[] = [];
+    const previousMonth: Meeting[] = [];
+
+    allMeetings.forEach((meeting) => {
+      const meetingDate = new Date(meeting.createdAt || meeting.startTimeISO);
+      const meetingTime = meetingDate.getTime();
+
+      if (meetingTime >= ranges.thisWeek.start.getTime() && meetingTime <= ranges.thisWeek.end.getTime()) {
+        thisWeek.push(meeting);
+      } else if (meetingTime >= ranges.lastWeek.start.getTime() && meetingTime <= ranges.lastWeek.end.getTime()) {
+        lastWeek.push(meeting);
+      } else if (
+        meetingTime >= ranges.previousMonth.start.getTime() &&
+        meetingTime <= ranges.previousMonth.end.getTime()
+      ) {
+        previousMonth.push(meeting);
+      }
+    });
+
+    // Sort each group by date (newest first)
+    const sortByDate = (a: Meeting, b: Meeting) => {
+      const dateA = new Date(a.createdAt || a.startTimeISO).getTime();
+      const dateB = new Date(b.createdAt || b.startTimeISO).getTime();
+      return dateB - dateA; // Descending (newest first)
+    };
+
+    thisWeek.sort(sortByDate);
+    lastWeek.sort(sortByDate);
+    previousMonth.sort(sortByDate);
+
+    return {
+      thisWeekMeetings: thisWeek,
+      lastWeekMeetings: lastWeek,
+      previousMonthMeetings: previousMonth,
+      allFilteredMeetings: [],
+    };
+  }, [cachedMeetings, searchMeetings, searchText, filterType, ranges]);
 
   const totalMeetings =
-    searchText || filterType !== "all"
-      ? allFilteredMeetings.length
-      : thisWeekMeetings.length + lastWeekMeetings.length + previousMonthMeetings.length + olderMeetings.length;
+    filterType === "all"
+      ? thisWeekMeetings.length + lastWeekMeetings.length + previousMonthMeetings.length
+      : allFilteredMeetings.length;
 
   return (
     <List
@@ -170,11 +140,11 @@ function Command() {
           <RefreshCacheAction onRefresh={refreshCache} />
         </ActionPanel>
       }
-      pagination={apiKeyPresent && !error ? { pageSize: 20, hasMore, onLoadMore: loadMoreMeetings } : undefined}
       searchBarAccessory={
-        teams.length > 0 ? (
-          <List.Dropdown tooltip="Filter by Team" value={filterType} onChange={setFilterType}>
-            <List.Dropdown.Item title="All Meetings" value="all" />
+        <List.Dropdown tooltip="Filter by Team" value={filterType} onChange={setFilterType}>
+          <List.Dropdown.Item title="All Meetings" value="all" />
+
+          {teams.length > 0 && (
             <List.Dropdown.Section title="Teams">
               {teams.map((team) => (
                 <List.Dropdown.Item
@@ -185,40 +155,31 @@ function Command() {
                 />
               ))}
             </List.Dropdown.Section>
-          </List.Dropdown>
-        ) : undefined
+          )}
+        </List.Dropdown>
       }
     >
       {error ? (
-        (() => {
-          const errorType = classifyError(error);
-          const isAuthError = errorType === ErrorType.API_KEY_MISSING || errorType === ErrorType.API_KEY_INVALID;
-          const isRateLimitError = errorType === ErrorType.RATE_LIMIT;
-
-          return (
-            <List.EmptyView
-              icon={isAuthError ? Icon.Key : Icon.ExclamationMark}
-              title={
-                isAuthError ? "Invalid API Key" : isRateLimitError ? "Rate Limit Exceeded" : "Failed to Load Meetings"
-              }
-              description={
-                isAuthError
-                  ? "Please check your Fathom API Key in Extension Preferences."
-                  : isRateLimitError
-                    ? "You've made too many requests. Please wait a moment and try again."
-                    : getUserFriendlyError(error).message
-              }
-              actions={
-                <ActionPanel>
-                  {isAuthError && (
-                    <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
-                  )}
-                  <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={refreshCache} />
-                </ActionPanel>
-              }
-            />
-          );
-        })()
+        <List.EmptyView
+          icon={Icon.ExclamationMark}
+          title={
+            error instanceof Error && error.message.includes("Rate limit")
+              ? "Rate Limit Exceeded"
+              : "Failed to Load Meetings"
+          }
+          description={
+            error instanceof Error && error.message.includes("Rate limit")
+              ? "You've made too many requests. Please wait a moment and try again."
+              : error instanceof Error
+                ? error.message
+                : String(error)
+          }
+          actions={
+            <ActionPanel>
+              <Action title="Refresh Cache" icon={Icon.ArrowClockwise} onAction={refreshCache} />
+            </ActionPanel>
+          }
+        />
       ) : totalMeetings === 0 ? (
         <List.EmptyView
           icon={Icon.Calendar}
@@ -236,18 +197,8 @@ function Command() {
             </ActionPanel>
           }
         />
-      ) : allFilteredMeetings.length > 0 ? (
-        // Flat chronological list (when searching or team-filtering)
-        <List.Section
-          title={searchText ? "Search Results" : filterDisplayName || "Filtered Meetings"}
-          subtitle={`${totalMeetings} meetings`}
-        >
-          {allFilteredMeetings.map((meeting) => (
-            <MeetingListItem key={meeting.id} meeting={meeting} onRefresh={refreshCache} />
-          ))}
-        </List.Section>
-      ) : (
-        // Grouped view (default browse)
+      ) : filterType === "all" ? (
+        // Grouped view (no filter)
         <>
           {thisWeekMeetings.length > 0 && (
             <List.Section title="This Week" subtitle={`${thisWeekMeetings.length} meetings`}>
@@ -272,15 +223,14 @@ function Command() {
               ))}
             </List.Section>
           )}
-
-          {olderMeetings.length > 0 && (
-            <List.Section title="Older" subtitle={`${olderMeetings.length} meetings`}>
-              {olderMeetings.map((meeting) => (
-                <MeetingListItem key={meeting.id} meeting={meeting} onRefresh={refreshCache} />
-              ))}
-            </List.Section>
-          )}
         </>
+      ) : (
+        // Flat chronological list (when filtered)
+        <List.Section title={filterDisplayName || "Filtered Meetings"} subtitle={`${totalMeetings} meetings`}>
+          {allFilteredMeetings.map((meeting) => (
+            <MeetingListItem key={meeting.id} meeting={meeting} onRefresh={refreshCache} />
+          ))}
+        </List.Section>
       )}
     </List>
   );
@@ -397,5 +347,3 @@ export function MeetingTranscriptDetail({ meeting, recordingId }: { meeting: Mee
     />
   );
 }
-
-export default Command;

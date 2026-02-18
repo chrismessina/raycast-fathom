@@ -128,7 +128,7 @@ export function useCachedMeetings(options: UseCachedMeetingsOptions = {}): UseCa
       if (!query || query.trim() === "") return meetings;
       return searchCachedMeetings(cachedMeetings, query).map(toMeeting);
     },
-    [cachedMeetings, meetings],
+    [cachedMeetings],
   );
 
   // Refresh cache by fetching from API

@@ -26,7 +26,6 @@ interface InFlightRequest<T> {
 class RequestQueue {
   private queue: QueuedRequest<unknown>[] = [];
   private inFlight = new Map<string, InFlightRequest<unknown>>();
-  private pendingPromises = new Map<string, Promise<unknown>>();
   private maxConcurrent = 3; // Max 3 concurrent API requests
   private processing = false;
 
@@ -38,19 +37,12 @@ class RequestQueue {
     // Check if request is already in flight
     const existing = this.inFlight.get(key);
     if (existing) {
-      logger.log(`[Queue] Deduplicating in-flight request: ${key}`);
+      logger.log(`[Queue] Deduplicating request: ${key}`);
       return existing.promise as Promise<T>;
     }
 
-    // Check if request is already waiting in the queue
-    const queued = this.pendingPromises.get(key);
-    if (queued) {
-      logger.log(`[Queue] Deduplicating queued request: ${key}`);
-      return queued as Promise<T>;
-    }
-
     // Create a new promise for this request
-    const promise = new Promise<T>((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       const request: QueuedRequest<T> = {
         key,
         priority,
@@ -68,18 +60,6 @@ class RequestQueue {
       // Start processing if not already running
       this.processQueue();
     });
-
-    // Track the pending promise for deduplication.
-    // Use .then/.catch instead of .finally to avoid creating an unhandled rejection —
-    // .finally() creates a derived promise that rejects when the original rejects,
-    // and since nobody awaits it, Raycast's runtime catches it as an unhandled rejection.
-    this.pendingPromises.set(key, promise as Promise<unknown>);
-    promise.then(
-      () => this.pendingPromises.delete(key),
-      () => this.pendingPromises.delete(key),
-    );
-
-    return promise;
   }
 
   /**
@@ -132,6 +112,7 @@ class RequestQueue {
         logger.error(`[Queue] Failed request: ${key}`, error);
         this.inFlight.delete(key);
         reject(error);
+        throw error;
       });
 
     // Track in-flight request
@@ -147,7 +128,6 @@ class RequestQueue {
   clear(): void {
     logger.log(`[Queue] Clearing queue (${this.queue.length} pending, ${this.inFlight.size} in-flight)`);
     this.queue = [];
-    this.pendingPromises.clear();
     // Don't clear in-flight requests - let them complete
   }
 

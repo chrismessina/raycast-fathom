@@ -1,4 +1,4 @@
-import { Detail, ActionPanel, Action, Icon, Keyboard } from "@raycast/api";
+import { Detail, ActionPanel, Action, Icon } from "@raycast/api";
 import type { Meeting, ActionItem } from "./types/Types";
 import { MeetingCopyActions, MeetingOpenActions } from "./actions/MeetingActions";
 import { useTeamColor } from "./hooks/useTeamColor";
@@ -21,14 +21,14 @@ export function ActionItemDetail({ item, meeting }: { item: ActionItem; meeting:
               title="Jump to Timestamp"
               url={item.recordingPlaybackUrl}
               icon={Icon.Play}
-              shortcut={Keyboard.Shortcut.Common.Open}
+              shortcut={{ modifiers: ["cmd"], key: "o" }}
             />
           )}
           <Action.CopyToClipboard
             title="Copy Description"
             content={item.description}
             icon={Icon.Clipboard}
-            shortcut={Keyboard.Shortcut.Common.Copy}
+            shortcut={{ modifiers: ["cmd"], key: "c" }}
           />
           <MeetingCopyActions meeting={meeting} />
           <MeetingOpenActions meeting={meeting} />

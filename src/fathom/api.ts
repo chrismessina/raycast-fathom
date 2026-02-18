@@ -64,14 +64,12 @@ async function authGet<T>(path: string, retryCount = 0): Promise<T> {
         await sleep(retryDelay);
         return authGet<T>(path, retryCount + 1);
       }
-      // After max retries, throw a more informative error
       logger.error(`[API] ❌ RATE LIMIT EXCEEDED on ${path} after ${MAX_RETRIES} retries`);
       throw new Error(
         "RATE_LIMIT: Rate limit exceeded after multiple retries. The Fathom API is temporarily unavailable. Please try again in a few moments.",
       );
     }
 
-    // Handle other HTTP errors with user-friendly messages
     if (res.status === 404) {
       throw new Error(`NOT_FOUND: The requested resource was not found.`);
     }
@@ -199,11 +197,13 @@ function mapMeetingFromHTTP(raw: unknown): Meeting | undefined {
     durationSeconds = Math.floor((end - start) / 1000);
   }
 
-  const calendarInviteesDomainType = toStringOrUndefined(r["calendar_invitees_domains_type"]) as
-    | "all"
-    | "only_internal"
-    | "one_or_more_external"
-    | undefined;
+  const calendarInviteesDomainTypeRaw = toStringOrUndefined(r["calendar_invitees_domains_type"]);
+  const validDomainTypes = ["all", "only_internal", "one_or_more_external"] as const;
+  const calendarInviteesDomainType = validDomainTypes.includes(
+    calendarInviteesDomainTypeRaw as (typeof validDomainTypes)[number],
+  )
+    ? (calendarInviteesDomainTypeRaw as "all" | "only_internal" | "one_or_more_external")
+    : undefined;
   const isExternal = calendarInviteesDomainType === "one_or_more_external";
   const transcriptLanguage = toStringOrUndefined(r["transcript_language"]);
 
@@ -438,7 +438,6 @@ export async function listTeams(
   return { items, nextCursor };
 }
 
-// Map raw HTTP response to Team type
 function mapTeamFromHTTP(raw: unknown): Team | undefined {
   if (typeof raw !== "object" || raw === null) return undefined;
   const r = raw as Record<string, unknown>;
@@ -449,7 +448,7 @@ function mapTeamFromHTTP(raw: unknown): Team | undefined {
   const createdAt = toStringOrUndefined(r["created_at"]);
 
   return {
-    id: name, // Use name as ID since API doesn't provide separate ID
+    id: name,
     name,
     createdAt,
     memberCount: undefined,
@@ -483,7 +482,6 @@ export async function listTeamMembers(
   return { items, nextCursor };
 }
 
-// Map raw HTTP response to TeamMember type
 function mapTeamMemberFromHTTP(raw: unknown): TeamMember | undefined {
   if (typeof raw !== "object" || raw === null) return undefined;
   const r = raw as Record<string, unknown>;
@@ -498,7 +496,7 @@ function mapTeamMemberFromHTTP(raw: unknown): TeamMember | undefined {
   const team = toStringOrUndefined(r["team"]);
 
   return {
-    id: email, // Use email as ID
+    id: email,
     name,
     email,
     emailDomain,

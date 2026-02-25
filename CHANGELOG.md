@@ -19,7 +19,7 @@
 
 - **Spurious "Stopped" toast**: Fixed a token collision where triggering "Load More" would falsely abort the initial background fetch and show a green "Stopped" toast
 
-## [Lazy Pagination & Smart Cache] - {PR_MERGE_DATE}
+## [Lazy Pagination & Smart Cache] - 2026-02-19
 
 ### Added
 

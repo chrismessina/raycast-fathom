@@ -9,20 +9,20 @@
  * - Supports aborting background fetches
  */
 
+import { logger } from "@chrismessina/raycast-logger";
 import { showToast, Toast } from "@raycast/api";
 import { listMeetings } from "../fathom/api";
-import type { MeetingFilter, Meeting } from "../types/Types";
+import type { Meeting, MeetingFilter } from "../types/Types";
 import {
   cacheMeetingsBatch,
   getAllCachedMeetings,
+  getCacheMetadata,
   pruneCache,
   updateCacheMetadataFromMeetings,
-  getCacheMetadata,
   type CachedMeetingData,
 } from "./cache";
-import { globalQueue } from "./requestQueue";
 import { showContextualError } from "./errorHandling";
-import { logger } from "@chrismessina/raycast-logger";
+import { globalQueue } from "./requestQueue";
 
 const CACHE_SIZE = 500; // Keep all meetings (auto-paginated from API)
 

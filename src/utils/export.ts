@@ -1,11 +1,11 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
-import { logger } from "@chrismessina/raycast-logger";
-import { getPreferenceValues, open, showToast, Toast } from "@raycast/api";
+import os from "os";
+import { getPreferenceValues, showToast, Toast, open } from "@raycast/api";
 import { getMeetingSummary, getMeetingTranscript } from "../fathom/api";
 import type { Meeting } from "../types/Types";
 import { showContextualError } from "./errorHandling";
+import { logger } from "@chrismessina/raycast-logger";
 
 export type MeetingExportFormat = "txt" | "md" | "json";
 export type MeetingExportType = "transcript" | "summary";

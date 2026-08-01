@@ -1,5 +1,5 @@
-import { logger } from "@chrismessina/raycast-logger";
 import { showToast, Toast } from "@raycast/api";
+import { logger } from "@chrismessina/raycast-logger";
 
 /**
  * Error types that can occur in the extension

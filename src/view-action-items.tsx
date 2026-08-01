@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
-import { Icon, List } from "@raycast/api";
-import { ActionItemActions } from "./actions/ActionItemActions";
+import { List, Icon } from "@raycast/api";
+import { useState, useMemo } from "react";
+import type { Meeting, ActionItem } from "./types/Types";
 import { buildActionItemsCopyText } from "./components/ActionItems";
 import { useTeamColor } from "./hooks/useTeamColor";
-import type { ActionItem, Meeting } from "./types/Types";
+import { ActionItemActions } from "./actions/ActionItemActions";
 
 export function MeetingActionItemsDetail({ meeting }: { meeting: Meeting; recordingId?: string }) {
   // Use action items from the meeting object (already available)

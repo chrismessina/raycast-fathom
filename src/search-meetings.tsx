@@ -1,15 +1,16 @@
-import { useCallback, useMemo, useState } from "react";
-import { Action, ActionPanel, Detail, Icon, List, openExtensionPreferences, showToast, Toast } from "@raycast/api";
+import { List, ActionPanel, Action, Icon, Detail, showToast, Toast, openExtensionPreferences } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
-import { MeetingDetailActions } from "./actions/MeetingActions";
-import { RefreshCacheAction } from "./actions/RefreshCacheAction";
-import { MeetingListItem } from "./components/MeetingListItem";
-import { getMeetingSummary, getMeetingTranscript, listTeams } from "./fathom/api";
-import { hasApiKey, isApiKeyKnownInvalid } from "./fathom/auth";
-import { useCachedMeetings } from "./hooks/useCachedMeetings";
+import { useState, useMemo, useCallback } from "react";
 import type { Meeting, Team } from "./types/Types";
+import { getMeetingSummary, getMeetingTranscript, listTeams } from "./fathom/api";
+import { MeetingDetailActions } from "./actions/MeetingActions";
+import { useCachedMeetings } from "./hooks/useCachedMeetings";
+import { getUserFriendlyError, classifyError, ErrorType } from "./utils/errorHandling";
+import { hasApiKey, isApiKeyKnownInvalid } from "./fathom/auth";
+
+import { MeetingListItem } from "./components/MeetingListItem";
+import { RefreshCacheAction } from "./actions/RefreshCacheAction";
 import { getDateRanges } from "./utils/dates";
-import { classifyError, ErrorType, getUserFriendlyError } from "./utils/errorHandling";
 
 function getErrorDisplay(error: Error): { icon: Icon; title: string; description: string; isAuth: boolean } {
   const errorType = classifyError(error);

@@ -1,6 +1,6 @@
+import { LocalStorage } from "@raycast/api";
 import crypto from "crypto";
 import { logger } from "@chrismessina/raycast-logger";
-import { LocalStorage } from "@raycast/api";
 
 /**
  * Cache configuration for different data types

@@ -331,7 +331,10 @@ class CacheManager {
     try {
       logger.log(`[CacheManager] Caching ${meetings.length} meetings`);
 
-      // Batch write — all meetings in parallel, index updated once
+      // Sequential inside — see cache.ts. Meetings here come fresh from the API
+      // and still carry `transcriptText`; a meeting round-tripped through the
+      // list path would not, and `saveTranscript` no-ops on undefined rather
+      // than erasing the stored file.
       await cacheMeetingsBatch(
         meetings.map((m) => ({
           meetingId: m.recordingId,
@@ -347,7 +350,11 @@ class CacheManager {
       // Reload from storage to get the authoritative merged set
       const cached = await getAllCachedMeetings();
       this.cachedMeetings = cached;
-      logger.log(`[CacheManager] Cache updated, now have ${cached.length} meetings`);
+      logger.log(`[CacheManager] Cache updated, now have ${cached.length} meetings`, {
+        wroteThisBatch: meetings.length,
+        totalAfterMerge: cached.length,
+        uniqueIds: new Set(cached.map((c) => (c.meeting as { id?: string }).id)).size,
+      });
 
       this.notifyListeners();
     } catch (error) {

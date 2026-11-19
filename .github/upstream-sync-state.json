@@ -1,6 +1,6 @@
 {
-  "upstream_commit": "0a0163e80ab118d3d1ad0840f2bfba23f9307ccb",
-  "synced_at": "2026-10-05T18:37:34Z",
+  "upstream_commit": "18750b5bc7fe87eb76991e86f0cda47200daa48f",
+  "synced_at": "2026-11-19T23:27:04Z",
   "files": {
     ".gitignore": "fb6b71dfb6bb14e18c15ba69a6febe3d57a561ac",
     ".prettierrc": "fc0f5030683fa6196d08943646300755fce2f207",
@@ -16,7 +16,7 @@
     "metadata/fathom-2.png": "58db2e71142ea0feff882cd3be5f318ce910d4ec",
     "metadata/fathom-3.png": "8e11c6ed4072dde6d9bf591e8b5551ee26166d31",
     "package-lock.json": "b02c930252510576465c8df6e09920398dc1ddc8",
-    "package.json": "9c2ea0907f72c1193c911adc1bbbdd2f980ec341",
+    "package.json": "0396933d3825d3329e0b69f6ee89f2feea31888e",
     "src/actions/ActionItemActions.tsx": "13eba1b7a6d28f1c4130ab1939eeb6a8aa523c47",
     "src/actions/DownloadActions.tsx": "46833d10ff16d2b075cde4fa04b39d52838df80e",
     "src/actions/MeetingActions.tsx": "1673a9b6b3f788cdf44686f0f661048146630cf3",

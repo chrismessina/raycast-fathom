@@ -6,13 +6,13 @@ Thanks for helping. This guide covers running Fathom locally and sending a chang
 
 Fathom is published in the [Raycast Store](https://www.raycast.com/chrismessina/fathom).
 Open pull requests against [`raycast/extensions`](https://github.com/raycast/extensions/tree/main/extensions/fathom),
-not this repository: Raycast reviews every change there, and merged changes sync back here
-automatically. Open [issues](https://github.com/chrismessina/raycast-fathom/issues) here or in
+not this repository: Raycast reviews every change there, and merged changes come back here in a
+sync pull request. Open [issues](https://github.com/chrismessina/raycast-fathom/issues) here or in
 `raycast/extensions`, whichever you prefer.
 
 ## Run it locally
 
-You need [Raycast](https://www.raycast.com/) and Node.js 22 or later.
+You need [Raycast](https://www.raycast.com/) and Node.js 22.22.2 or later.
 
 1. In Raycast, find Fathom in the Store and choose **Fork Extension** from the action panel.
    Raycast checks out only this extension's folder from `raycast/extensions`.
@@ -32,15 +32,18 @@ and pasted into the extension's preferences.
 | `npm run fix-lint` | Fix what the linter can fix |
 | `npm run copy-runner` | Copy the runner bundle from `@chrismessina/raycast-downloader` into `assets/raycast-downloader-runner.js` |
 | `npm run verify-runner` | Fail if `assets/raycast-downloader-runner.js` does not match the installed package |
+| `npm run publish` | Run `verify-runner`, then open or update the pull request in `raycast/extensions` (`ray publish`) |
+| `prepublishOnly` | Stops `npm publish`: the extension goes to the Raycast Store, never to the npm registry |
 
 ## How it works
 
 - `src/fathom/api.ts` calls the Fathom API (`https://api.fathom.ai/external/v1`) with the key from
-  `src/fathom/auth.ts`; `src/utils/requestQueue.ts` limits concurrency, dedupes requests and
-  retries with backoff.
-- `src/utils/cacheManager.ts` is one cache shared by every view. Transcripts are stored on disk by
+  `src/fathom/auth.ts`; `src/utils/requestQueue.ts` limits concurrency and dedupes requests,
+  and `src/fathom/api.ts` retries a 429 response with exponential backoff.
+- `src/utils/cacheManager.ts` is the shared meeting-list cache, behind `useCachedMeetings`. Team
+  member searches and the member-meetings view cache their own requests with `useCachedPromise`. Transcripts are stored on disk by
   `src/utils/transcriptStore.ts` rather than in LocalStorage, whose writes can silently fail to
-  persist past its size ceiling; the file's header has the measurements.
+  persist past its size ceiling. The file's header has the measurements.
 - Recording downloads (`src/fathom/downloads.ts`, `src/utils/downloadRecording.ts`) ask Fathom to
   prepare the media, then hand the transfer to the runner in `assets/raycast-downloader-runner.js`,
   a background process that keeps going after Raycast closes the command. `src/utils/downloadJobs.ts`

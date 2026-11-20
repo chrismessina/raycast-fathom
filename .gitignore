@@ -26,3 +26,6 @@ docs/*.log
 
 # Local agent tooling; ray publish copies it otherwise, so it is stashed at publish time.
 .compound-engineering/
+
+# Contributor guide; stays in the mirror and never ships (see contributing-template.md).
+CONTRIBUTING.md

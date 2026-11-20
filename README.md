@@ -66,3 +66,5 @@ This extension communicates directly with the Fathom API using your API key. All
 ## Support
 
 This extension is an independent project and is not affiliated with, endorsed by, or in any way officially connected to Fathom Video, Inc. All trademarks and copyrights related to Fathom are the property of their respective owners.
+
+Want to contribute? See [CONTRIBUTING.md](https://github.com/chrismessina/raycast-fathom/blob/main/CONTRIBUTING.md).
